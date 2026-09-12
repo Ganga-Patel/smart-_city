@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart City Weather &amp; Air Quality - Anand, Gujarat</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+            },
+            dark: {
+              950: '#030712',
+              900: '#0f172a',
+              850: '#131e36',
+              800: '#1e293b',
+              700: '#334155'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js for Visual Analysis -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-dark-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-sky-500/30 selection:text-sky-200">
+
+  <!-- ================= TOP NAVIGATION HEADER ================= -->
+  <!-- Clean top bar without °C/°F toggle (placed directly beside temperature value below) -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-dark-900/80 backdrop-blur-xl px-4 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+    
+    <!-- Brand / Title -->
+    <div class="flex items-center gap-3.5">
+      <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-sky-500 via-cyan-400 to-emerald-400 p-0.5 shadow-lg shadow-sky-500/20 flex items-center justify-center">
+        <div class="h-full w-full bg-dark-950 rounded-[10px] flex items-center justify-center">
+          <i data-lucide="cloud-sun" class="w-5 h-5 text-sky-400"></i>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-base font-bold tracking-tight text-white">Smart City Weather &amp; Air Quality</h1>
+          <!-- Fixed Location Badge -->
+          <span class="px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1.5">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <i data-lucide="map-pin" class="w-3 h-3"></i>
+            <span>Anand, Gujarat, India</span>
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 font-medium">Real-Time Sensor Telemetry &amp; Urban Atmospheric Station</p>
+      </div>
+    </div>
+
+    <!-- Right Controls: Link to Original IoT Dashboard, Live Sync & Refresh -->
+    <div class="flex items-center gap-3">
+      <!-- Switch to Original IoT Command Center Dashboard -->
+      <a href="iot-dashboard.html" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-800/90 hover:bg-slate-700/60 text-slate-300 border border-slate-700 hover:text-white transition shadow-sm">
+        <i data-lucide="cpu" class="w-3.5 h-3.5 text-sky-400"></i>
+        <span>IoT Sensor Command Center</span>
+      </a>
+
+      <div class="h-5 w-px bg-slate-800 hidden sm:block"></div>
+
+      <!-- Sync Status -->
+      <div class="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 font-mono">
+        <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+        <span>Sync: <b id="lastSyncTime" class="text-slate-200">--:--:--</b></span>
+      </div>
+
+      <!-- Manual Refresh Button -->
+      <button id="manualRefreshBtn" title="Refresh Live Data" class="p-2 rounded-xl bg-dark-800/90 border border-slate-700/80 text-slate-300 hover:text-white hover:border-slate-600 transition">
+        <i id="refreshIcon" data-lucide="rotate-cw" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTENT: THREE BOXES ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- ================= UPPER THREE BOXES GRID ================= -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- ========================================================================= -->
+      <!-- BOX 1: WEATHER CONDITIONS                                                 -->
+      <!-- - Temperature & Humidity: Real-time FROM SENSOR (Firebase)                 -->
+      <!-- - Other Weather Data: FROM WEATHER API (Anand, Gujarat, India)            -->
+      <!-- - °C / °F Toggle: Directly beside the temperature value                    -->
+      <!-- ========================================================================= -->
+      <section class="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between relative overflow-hidden bg-dark-900/70 shadow-2xl">
+        <!-- Subtle ambient glow -->
+        <div class="absolute -right-16 -top-16 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div>
+          <!-- Box Header -->
+          <div class="flex items-center justify-between pb-4 border-b border-slate-800/80 mb-5">
+            <div class="flex items-center gap-3">
+              <div class="p-2.5 rounded-xl bg-sky-500/20 text-sky-400">
+                <i data-lucide="cloud-sun" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-white tracking-tight">Weather Conditions</h2>
+                <p class="text-xs text-slate-400">Anand, Gujarat, India</p>
+              </div>
+            </div>
+            <span class="px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1.5">
+              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Sensor &amp; Weather Active
+            </span>
+          </div>
+
+          <!-- 1. TEMPERATURE (FROM SENSOR) WITH °C / °F BUTTON RIGHT BESIDE THE VALUE -->
+          <div class="p-4 rounded-xl bg-dark-950/80 border border-slate-800/90 mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                <i data-lucide="thermometer" class="w-4 h-4 text-rose-400"></i>
+                Ambient Temperature <span class="text-[11px] font-mono text-violet-400 font-semibold">(Sensor)</span>
+              </span>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                Firebase DHT22
+              </span>
+            </div>
+
+            <!-- Temperature Value + Unit + Toggle Button Directly Beside It -->
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div class="flex items-baseline gap-1.5">
+                <span id="sensorTempVal" class="text-4xl font-extrabold tracking-tight text-white font-mono">--</span>
+                <span id="sensorTempUnit" class="text-2xl font-bold text-sky-400">°C</span>
+              </div>
+
+              <!-- °C / °F Unit Toggle Button directly beside the temperature value -->
+              <button id="tempUnitToggleBtn" title="Click to convert between Celsius (°C) and Fahrenheit (°F)" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-dark-800 text-slate-300 border border-slate-700 hover:border-sky-500 hover:text-white transition cursor-pointer flex items-center gap-1.5 shadow-sm">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-sky-400"></i>
+                <span>Switch to °F</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. HUMIDITY (FROM SENSOR) -->
+          <div class="p-4 rounded-xl bg-dark-950/80 border border-slate-800/90 mb-4">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                <i data-lucide="droplets" class="w-4 h-4 text-sky-400"></i>
+                Relative Humidity <span class="text-[11px] font-mono text-violet-400 font-semibold">(Sensor)</span>
+              </span>
+              <span id="sensorHumidityStatus" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                Optimal Comfort
+              </span>
+            </div>
+
+            <div class="flex items-baseline gap-1.5 mb-2">
+              <span id="sensorHumidityVal" class="text-3xl font-extrabold tracking-tight text-white font-mono">--</span>
+              <span class="text-base font-bold text-slate-400">%</span>
+            </div>
+
+            <!-- Custom Progress Bar -->
+            <div class="w-full bg-dark-800 rounded-full h-2 overflow-hidden border border-slate-800">
+              <div id="sensorHumidityBar" class="bg-gradient-to-r from-sky-500 to-cyan-400 h-full rounded-full transition-all duration-700" style="width: 47%"></div>
+            </div>
+          </div>
+
+          <!-- 3. OTHER WEATHER DATA FROM WEATHER API (ANAND, GUJARAT, INDIA) -->
+          <div class="space-y-3">
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 pt-1">
+              <i data-lucide="cloud" class="w-3.5 h-3.5 text-sky-400"></i>
+              Atmospheric &amp; Wind Telemetry (Weather API)
+            </div>
+
+            <!-- Weather Condition Card -->
+            <div class="p-3.5 rounded-xl bg-dark-950/80 border border-slate-800/90 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <img id="weatherConditionIcon" src="" alt="Weather" class="w-8 h-8 rounded-lg bg-dark-800 p-0.5 border border-slate-700">
+                <div>
+                  <div class="text-xs text-slate-400">Sky Condition</div>
+                  <div id="weatherConditionText" class="text-sm font-bold text-white">Partly Cloudy</div>
+                </div>
+              </div>
+              <span class="text-[11px] font-mono text-slate-400 bg-dark-800 px-2 py-0.5 rounded border border-slate-700">Anand Live</span>
+            </div>
+
+            <!-- Wind Speed & Direction -->
+            <div class="p-3.5 rounded-xl bg-dark-950/80 border border-slate-800/90 flex items-center justify-between">
+              <div>
+                <div class="text-xs text-slate-400 flex items-center gap-1.5 mb-1">
+                  <i data-lucide="wind" class="w-3.5 h-3.5 text-teal-400"></i>
+                  Wind Speed &amp; Heading
+                </div>
+                <div class="flex items-baseline gap-2">
+                  <span id="weatherWindSpeed" class="text-xl font-bold font-mono text-white">16 km/h</span>
+                  <span id="weatherWindDir" class="text-xs text-slate-400 font-mono">W (266°)</span>
+                </div>
+              </div>
+
+              <!-- Compass Rotating Indicator -->
+              <div class="h-9 w-9 rounded-full bg-dark-800 border border-slate-700 flex items-center justify-center relative">
+                <div id="weatherCompassNeedle" class="w-5 h-5 flex items-center justify-center transition-transform duration-700" style="transform: rotate(266deg);">
+                  <i data-lucide="navigation-2" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pressure, UV Index, Visibility -->
+            <div class="grid grid-cols-3 gap-2.5 text-center">
+              <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+                <div class="text-[10px] text-slate-400 mb-0.5">Air Pressure</div>
+                <div id="weatherPressure" class="text-xs font-bold text-white font-mono">1011 hPa</div>
+              </div>
+              <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+                <div class="text-[10px] text-slate-400 mb-0.5">UV Index</div>
+                <div id="weatherUv" class="text-xs font-bold text-white font-mono">UV 4</div>
+              </div>
+              <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+                <div class="text-[10px] text-slate-400 mb-0.5">Visibility</div>
+                <div id="weatherVisibility" class="text-xs font-bold text-white font-mono">10 km</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-800/80 text-xs text-slate-500 flex items-center justify-between mt-4">
+          <span>Data Sources: Local Sensor + Weather API</span>
+          <span class="font-mono text-emerald-400">Updated Real-Time</span>
+        </div>
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- BOX 2: AIR QUALITY (WITH GLOWING CIRCULAR AQI GAUGE - ANAND, GUJARAT)      -->
+      <!-- ========================================================================= -->
+      <section class="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between relative overflow-hidden bg-dark-900/70 shadow-2xl">
+        <!-- Subtle ambient glow -->
+        <div class="absolute -right-16 -top-16 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div>
+          <!-- Box Header -->
+          <div class="flex items-center justify-between pb-4 border-b border-slate-800/80 mb-5">
+            <div class="flex items-center gap-3">
+              <div class="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400">
+                <i data-lucide="shield" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-white tracking-tight">Air Quality Index</h2>
+                <p class="text-xs text-slate-400">Anand, Gujarat, India</p>
+              </div>
+            </div>
+            <span id="airAqiPill" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              Good (Healthy)
+            </span>
+          </div>
+
+          <!-- Circular Glowing Radial AQI Gauge -->
+          <div class="p-4 rounded-xl bg-dark-950/80 border border-slate-800/90 mb-4 flex flex-col items-center justify-center">
+            <div class="relative flex items-center justify-center w-36 h-36 my-1">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" stroke="#1e293b" stroke-width="8" fill="transparent"/>
+                <circle id="aqiCircleRing" cx="50" cy="50" r="40" stroke="url(#aqiEmeraldGrad)" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="195" stroke-linecap="round" fill="transparent" class="transition-all duration-1000"/>
+                <defs>
+                  <linearGradient id="aqiEmeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#10b981" />
+                    <stop offset="100%" stop-color="#38bdf8" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="absolute flex flex-col items-center justify-center">
+                <span id="airAqiScore" class="text-4xl font-extrabold tracking-tight text-white font-mono">43</span>
+                <span id="airAqiStatus" class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider mt-0.5">GOOD</span>
+              </div>
+            </div>
+
+            <div class="w-full text-center mt-2">
+              <div class="text-[11px] text-slate-400">Overall Ambient Air Quality Standard</div>
+              <div class="flex justify-between text-[9px] text-slate-500 font-mono mt-1 px-4">
+                <span>0 Good</span>
+                <span>50 Moderate</span>
+                <span>100 Unhealthy</span>
+                <span>200+ Hazardous</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Particulate Matter: PM2.5 and PM10 -->
+          <div class="grid grid-cols-2 gap-3 mb-4">
+            <!-- PM2.5 -->
+            <div class="p-3.5 rounded-xl bg-dark-950/80 border border-slate-800/90">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-semibold text-slate-400">PM2.5 (Fine Dust)</span>
+                <span class="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400">Safe</span>
+              </div>
+              <div id="airPm25" class="text-xl font-bold text-white font-mono">17.9 µg/m³</div>
+              <p class="text-[10px] text-slate-500 mt-1">Inhalable fine particles</p>
+            </div>
+
+            <!-- PM10 -->
+            <div class="p-3.5 rounded-xl bg-dark-950/80 border border-slate-800/90">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-xs font-semibold text-slate-400">PM10 (Coarse Dust)</span>
+                <span class="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400">Safe</span>
+              </div>
+              <div id="airPm10" class="text-xl font-bold text-white font-mono">39.1 µg/m³</div>
+              <p class="text-[10px] text-slate-500 mt-1">Respirable suspended dust</p>
+            </div>
+          </div>
+
+          <!-- Trace Atmospheric Pollutants -->
+          <div class="space-y-2">
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="gauge" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Trace Gas Concentrations
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+              <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+                <div class="text-[10px] text-slate-400 font-semibold mb-0.5">NO₂ (Nitrogen)</div>
+                <div id="airNo2" class="text-sm font-bold text-white font-mono">5.8 µg/m³</div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+                <div class="text-[10px] text-slate-400 font-semibold mb-0.5">O₃ (Ozone)</div>
+                <div id="airO3" class="text-sm font-bold text-white font-mono">38.0 µg/m³</div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+                <div class="text-[10px] text-slate-400 font-semibold mb-0.5">CO (Carbon Monoxide)</div>
+                <div id="airCo" class="text-sm font-bold text-white font-mono">123 µg/m³</div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+                <div class="text-[10px] text-slate-400 font-semibold mb-0.5">SO₂ (Sulfur)</div>
+                <div id="airSo2" class="text-sm font-bold text-white font-mono">9.6 µg/m³</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-800/80 text-xs text-slate-500 flex items-center justify-between mt-4">
+          <span>Standard: EPA Air Quality Index</span>
+          <span class="font-mono text-emerald-400">Healthy Atmosphere</span>
+        </div>
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- BOX 3: URBAN TRAFFIC & MOBILITY (TOMTOM API / ANAND TRAFFIC FLOW)         -->
+      <!-- ========================================================================= -->
+      <section class="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between relative overflow-hidden bg-dark-900/70 shadow-2xl">
+        <!-- Subtle ambient glow -->
+        <div class="absolute -right-16 -top-16 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div>
+          <!-- Box Header -->
+          <div class="flex items-center justify-between pb-4 border-b border-slate-800/80 mb-5">
+            <div class="flex items-center gap-3">
+              <div class="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
+                <i data-lucide="navigation" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-white tracking-tight">Urban Traffic &amp; Mobility</h2>
+                <p class="text-xs text-slate-400">Anand, Gujarat, India</p>
+              </div>
+            </div>
+            <span id="trafficStatusBadge" class="px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1.5">
+              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span id="trafficStatusText">Smooth Flow</span>
+            </span>
+          </div>
+
+          <!-- 1. Live Arterial Velocity vs Baseline -->
+          <div class="p-4 rounded-xl bg-dark-950/80 border border-slate-800/90 mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                <i data-lucide="gauge" class="w-4 h-4 text-amber-400"></i>
+                Arterial Flow Velocity
+              </span>
+              <span id="trafficFreeFlowSpeed" class="text-[10px] font-mono text-slate-400 bg-dark-800 px-2 py-0.5 rounded border border-slate-700">
+                Baseline: 50 km/h
+              </span>
+            </div>
+
+            <div class="flex items-baseline justify-between">
+              <div class="flex items-baseline gap-1.5">
+                <span id="trafficCurrentSpeed" class="text-4xl font-extrabold tracking-tight text-white font-mono">35</span>
+                <span class="text-xl font-bold text-slate-400">km/h</span>
+              </div>
+              <div class="text-right text-xs">
+                <span class="text-slate-400">Flow Efficiency:</span>
+                <span id="trafficEfficiencyText" class="text-emerald-400 font-mono font-bold ml-1">Optimal</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Circular Congestion & Saturation Radial Gauge -->
+          <div class="p-4 rounded-xl bg-dark-950/80 border border-slate-800/90 mb-4 flex flex-col items-center justify-center">
+            <div class="relative flex items-center justify-center w-36 h-36 my-1">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" stroke="#1e293b" stroke-width="8" fill="transparent"/>
+                <circle id="trafficCircleRing" cx="50" cy="50" r="40" stroke="url(#trafficAmberGrad)" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="175" stroke-linecap="round" fill="transparent" class="transition-all duration-1000"/>
+                <defs>
+                  <linearGradient id="trafficAmberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#10b981" />
+                    <stop offset="60%" stop-color="#f59e0b" />
+                    <stop offset="100%" stop-color="#ef4444" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="absolute flex flex-col items-center justify-center">
+                <span id="trafficCongestionVal" class="text-3xl font-extrabold tracking-tight text-white font-mono">30%</span>
+                <span id="trafficCongestionLabel" class="text-[10px] font-bold text-amber-400 uppercase tracking-wider mt-0.5">MODERATE</span>
+              </div>
+            </div>
+
+            <div class="w-full text-center mt-2">
+              <div class="text-[11px] text-slate-400">Urban Congestion &amp; Saturation Index</div>
+              <div class="flex justify-between text-[9px] text-slate-500 font-mono mt-1 px-4">
+                <span>0% Free</span>
+                <span>30% Normal</span>
+                <span>60% Dense</span>
+                <span>100% Gridlock</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. Transit Metrics Grid: Delay, Confidence, Incidents -->
+          <div class="grid grid-cols-3 gap-2.5 text-center mb-4">
+            <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+              <div class="text-[10px] text-slate-400 mb-0.5">Commute Delay</div>
+              <div id="trafficDelayVal" class="text-xs font-bold text-sky-400 font-mono">+55 sec</div>
+            </div>
+            <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+              <div class="text-[10px] text-slate-400 mb-0.5">Confidence</div>
+              <div id="trafficConfidenceVal" class="text-xs font-bold text-white font-mono">95%</div>
+            </div>
+            <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+              <div class="text-[10px] text-slate-400 mb-0.5">Road Incidents</div>
+              <div id="trafficIncidentsVal" class="text-xs font-bold text-emerald-400 font-mono">0 Alerts</div>
+            </div>
+          </div>
+
+          <!-- 4. Key Transit Corridors in Anand -->
+          <div class="space-y-2">
+            <div class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-amber-400"></i>
+                Key Anand Transit Corridors
+              </span>
+              <span class="text-[10px] font-mono text-slate-500">Live Segments</span>
+            </div>
+
+            <div id="trafficCorridorsList" class="space-y-1.5">
+              <div class="p-2.5 rounded-lg bg-dark-950/80 border border-slate-800 flex items-center justify-between">
+                <div class="truncate mr-2">
+                  <div class="text-xs font-semibold text-slate-200 truncate">Anand – Vidyanagar Road (SH 188)</div>
+                  <div class="text-[10px] text-emerald-400 font-mono">Smooth Flow</div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="text-xs font-bold font-mono text-white">33 km/h</div>
+                  <div class="text-[9px] text-slate-500 font-mono">Free: 50 km/h</div>
+                </div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-dark-950/80 border border-slate-800 flex items-center justify-between">
+                <div class="truncate mr-2">
+                  <div class="text-xs font-semibold text-slate-200 truncate">Station Road (Anand Junction)</div>
+                  <div class="text-[10px] text-slate-400 font-mono">Normal Flow</div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="text-xs font-bold font-mono text-white">27 km/h</div>
+                  <div class="text-[9px] text-slate-500 font-mono">Free: 40 km/h</div>
+                </div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-dark-950/80 border border-slate-800 flex items-center justify-between">
+                <div class="truncate mr-2">
+                  <div class="text-xs font-semibold text-slate-200 truncate">NH 48 Samarkha Expressway</div>
+                  <div class="text-[10px] text-teal-400 font-mono">Rapid / Free Flow</div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="text-xs font-bold font-mono text-white">71 km/h</div>
+                  <div class="text-[9px] text-slate-500 font-mono">Free: 80 km/h</div>
+                </div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-dark-950/80 border border-slate-800 flex items-center justify-between">
+                <div class="truncate mr-2">
+                  <div class="text-xs font-semibold text-slate-200 truncate">Borsad Chokdi Junction</div>
+                  <div class="text-[10px] text-slate-400 font-mono">Normal Flow</div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="text-xs font-bold font-mono text-white">29 km/h</div>
+                  <div class="text-[9px] text-slate-500 font-mono">Free: 45 km/h</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pt-4 border-t border-slate-800/80 text-xs text-slate-500 flex items-center justify-between mt-4">
+          <span>Standard: TomTom Flow API</span>
+          <span class="font-mono text-emerald-400">Live Mobility Sync</span>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- BOX 3: VISUALIZED ENVIRONMENTAL & MICROCLIMATE TELEMETRY ANALYSIS         -->
+    <!-- Positioned after upper two boxes, featuring:                               -->
+    <!-- 1. Dedicated Temperature Analysis (Heat Index, Range, Visual Spectrum Bar) -->
+    <!-- 2. Dedicated Humidity Analysis (Dew Point, Evaporation, Spectrum Bar)     -->
+    <!-- 3. Pollutant Distribution vs NAAQS Safety Limits (Chart.js Bar Chart)     -->
+    <!-- 4. Urban Health Scorecard (94/100) & Atmospheric Airflow Dispersion       -->
+    <!-- ========================================================================= -->
+    <section class="glass-panel p-6 rounded-2xl border border-slate-800 bg-dark-900/70 shadow-2xl relative overflow-hidden space-y-6">
+      <!-- Ambient decorative glow -->
+      <div class="absolute -right-16 -bottom-16 w-56 h-56 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- Analysis Section Header -->
+      <div class="flex flex-wrap items-center justify-between pb-4 border-b border-slate-800/80 gap-3">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-violet-500/20 text-violet-400">
+            <i data-lucide="line-chart" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-white tracking-tight">Environmental &amp; Microclimate Telemetry Analysis</h2>
+            <p class="text-xs text-slate-400">In-Depth Sensor Telemetry &bull; Urban Climate Insights &bull; Anand, Gujarat, India</p>
+          </div>
+        </div>
+        <span class="px-3 py-1 rounded-full text-xs font-semibold bg-violet-500/10 text-violet-400 border border-violet-500/20 flex items-center gap-1.5">
+          <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+          <span>Live Analytical Diagnostic</span>
+        </span>
+      </div>
+
+      <!-- ================= 1. DEDICATED TEMPERATURE & HUMIDITY ANALYSIS CARDS ================= -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- CARD 1: DEDICATED TEMPERATURE ANALYSIS -->
+        <div class="p-5 rounded-xl bg-dark-950/80 border border-slate-800/90 flex flex-col justify-between space-y-4">
+          <div>
+            <!-- Header -->
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800/70">
+              <div class="flex items-center gap-2">
+                <i data-lucide="thermometer" class="w-4 h-4 text-rose-400"></i>
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Temperature Analysis</span>
+                <span class="text-[10px] font-mono text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">DHT22 Sensor</span>
+              </div>
+              <span id="analysisTempStatus" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Optimal Comfort
+              </span>
+            </div>
+
+            <!-- Large Temperature Reading & Thermal Badge -->
+            <div class="flex items-baseline justify-between mt-3 mb-4">
+              <div>
+                <div class="text-[11px] text-slate-400 mb-0.5">Sensor Core Reading</div>
+                <div id="analysisTempReading" class="text-3xl sm:text-4xl font-extrabold font-mono text-white tracking-tight">26.0 °C</div>
+              </div>
+              <div class="text-right">
+                <div class="text-[11px] text-slate-400 mb-0.5">Thermal Comfort Zone</div>
+                <div class="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20 inline-block font-mono">
+                  Zone 2: 20°C – 27°C
+                </div>
+              </div>
+            </div>
+
+            <!-- 3-Metric Subgrid: Heat Index, Diurnal Range, Metabolic Stress -->
+            <div class="grid grid-cols-3 gap-2.5 text-center mb-4">
+              <div class="p-2.5 rounded-lg bg-dark-900/90 border border-slate-800">
+                <div class="text-[10px] text-slate-400 mb-0.5">Heat Index (RealFeel)</div>
+                <div id="analysisHeatIndexVal" class="text-sm font-bold text-amber-400 font-mono">27.2 °C</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-dark-900/90 border border-slate-800">
+                <div class="text-[10px] text-slate-400 mb-0.5">Diurnal Range</div>
+                <div id="analysisTempRange" class="text-sm font-bold text-sky-400 font-mono">22°C – 34°C</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-dark-900/90 border border-slate-800">
+                <div class="text-[10px] text-slate-400 mb-0.5">Metabolic Stress</div>
+                <div class="text-sm font-bold text-emerald-400 font-mono">Low (0.4)</div>
+              </div>
+            </div>
+
+            <!-- Visual Temperature Spectrum Bar -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-[11px] text-slate-400">
+                <span class="font-medium">Thermal Spectrum Position</span>
+                <span class="text-slate-500 font-mono">10°C &rarr; 45°C</span>
+              </div>
+              
+              <div class="relative w-full h-3 bg-dark-800 rounded-full border border-slate-700/80 my-2">
+                <!-- Color gradient -->
+                <div class="w-full h-full rounded-full bg-gradient-to-r from-sky-400 via-emerald-400 via-amber-400 to-rose-500"></div>
+                <!-- Dynamic Spectrum Needle / Marker -->
+                <div id="analysisTempSpectrumMarker" class="absolute top-1/2 -translate-y-1/2 -ml-2 w-4 h-4 rounded-full bg-white border-2 border-slate-950 shadow-md shadow-black transition-all duration-700 pointer-events-none" style="left: 45.7%;"></div>
+              </div>
+
+              <div class="flex justify-between text-[9px] text-slate-500 font-mono">
+                <span class="text-sky-400">10°C Cool</span>
+                <span class="text-emerald-400">20°C Comfort</span>
+                <span class="text-amber-400">30°C Warm</span>
+                <span class="text-rose-400">40°C+ Hot</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Advisory takeaway -->
+          <div class="p-3 rounded-lg bg-dark-900/70 border border-slate-800/80 text-[11px] text-slate-300 flex items-start gap-2">
+            <i data-lucide="info" class="w-4 h-4 text-sky-400 shrink-0 mt-0.5"></i>
+            <span>Ambient reading is in the ideal physiological comfort zone. Low sweat evaporation load and balanced indoor/outdoor temperature delta.</span>
+          </div>
+        </div>
+
+        <!-- CARD 2: DEDICATED HUMIDITY ANALYSIS -->
+        <div class="p-5 rounded-xl bg-dark-950/80 border border-slate-800/90 flex flex-col justify-between space-y-4">
+          <div>
+            <!-- Header -->
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800/70">
+              <div class="flex items-center gap-2">
+                <i data-lucide="droplets" class="w-4 h-4 text-sky-400"></i>
+                <span class="text-xs font-bold text-white uppercase tracking-wider">Humidity Analysis</span>
+                <span class="text-[10px] font-mono text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">DHT22 Sensor</span>
+              </div>
+              <span id="analysisHumidStatus" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                Optimal Moisture
+              </span>
+            </div>
+
+            <!-- Large Humidity Reading & Comfort Badge -->
+            <div class="flex items-baseline justify-between mt-3 mb-4">
+              <div>
+                <div class="text-[11px] text-slate-400 mb-0.5">Sensor Core Reading</div>
+                <div id="analysisHumidReading" class="text-3xl sm:text-4xl font-extrabold font-mono text-white tracking-tight">47.0%</div>
+              </div>
+              <div class="text-right">
+                <div class="text-[11px] text-slate-400 mb-0.5">Target Healthy Range</div>
+                <div class="text-xs font-bold text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-lg border border-sky-500/20 inline-block font-mono">
+                  30% – 60% RH
+                </div>
+              </div>
+            </div>
+
+            <!-- 3-Metric Subgrid: Dew Point, Evaporation Score, Condensation Risk -->
+            <div class="grid grid-cols-3 gap-2.5 text-center mb-4">
+              <div class="p-2.5 rounded-lg bg-dark-900/90 border border-slate-800">
+                <div class="text-[10px] text-slate-400 mb-0.5">Dew Point</div>
+                <div id="analysisDewPointVal" class="text-sm font-bold text-sky-400 font-mono">15.4 °C</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-dark-900/90 border border-slate-800">
+                <div class="text-[10px] text-slate-400 mb-0.5">Evap. Cooling</div>
+                <div id="analysisEvapScore" class="text-sm font-bold text-emerald-400 font-mono">81%</div>
+              </div>
+              <div class="p-2.5 rounded-lg bg-dark-900/90 border border-slate-800">
+                <div class="text-[10px] text-slate-400 mb-0.5">Condensation Risk</div>
+                <div class="text-sm font-bold text-emerald-400 font-mono">Safe (&lt; 0.2%)</div>
+              </div>
+            </div>
+
+            <!-- Visual Humidity Spectrum Bar -->
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-[11px] text-slate-400">
+                <span class="font-medium">Relative Humidity Spectrum</span>
+                <span class="text-slate-500 font-mono">0% &rarr; 100% RH</span>
+              </div>
+              
+              <div class="relative w-full h-3 bg-dark-800 rounded-full border border-slate-700/80 my-2">
+                <!-- Color gradient -->
+                <div class="w-full h-full rounded-full bg-gradient-to-r from-amber-400 via-emerald-400 via-sky-400 to-indigo-500"></div>
+                <!-- Dynamic Spectrum Needle / Marker -->
+                <div id="analysisHumidSpectrumMarker" class="absolute top-1/2 -translate-y-1/2 -ml-2 w-4 h-4 rounded-full bg-white border-2 border-slate-950 shadow-md shadow-black transition-all duration-700 pointer-events-none" style="left: 47%;"></div>
+              </div>
+
+              <div class="flex justify-between text-[9px] text-slate-500 font-mono">
+                <span class="text-amber-400">0% Arid</span>
+                <span class="text-emerald-400">30% Balanced</span>
+                <span class="text-sky-400">60% Ideal</span>
+                <span class="text-indigo-400">80%+ Muggy</span>
+              </div>
+            </div>
+
+            <!-- Evaporative Cooling Efficiency Progress Bar -->
+            <div class="space-y-1 pt-1">
+              <div class="flex justify-between text-[10px] text-slate-400">
+                <span>Evaporative Cooling Potential</span>
+                <span class="text-emerald-400 font-mono font-semibold">High Efficiency</span>
+              </div>
+              <div class="w-full bg-dark-800 rounded-full h-1.5 overflow-hidden border border-slate-800">
+                <div id="analysisEvapBar" class="bg-gradient-to-r from-sky-400 to-emerald-400 h-full rounded-full transition-all duration-700" style="width: 81%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Advisory takeaway -->
+          <div class="p-3 rounded-lg bg-dark-900/70 border border-slate-800/80 text-[11px] text-slate-300 flex items-start gap-2">
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"></i>
+            <span>Moisture content supports optimal human hydration and skin respiration without microbial or mold proliferation risk.</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ================= 2. POLLUTANT DISTRIBUTION CHART & URBAN SCORECARD ================= -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- PANEL: Pollutant Distribution Chart vs Standard Limits (7 cols) -->
+        <div class="lg:col-span-7 p-5 rounded-xl bg-dark-950/80 border border-slate-800/90 flex flex-col justify-between space-y-3">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800/70">
+            <div class="flex items-center gap-2">
+              <i data-lucide="bar-chart-2" class="w-4 h-4 text-sky-400"></i>
+              <span class="text-xs font-bold text-white uppercase tracking-wider">Pollutant Distribution vs NAAQS Safety Limits</span>
+            </div>
+            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">All Parameters Safe</span>
+          </div>
+
+          <!-- Chart Canvas -->
+          <div class="h-56 w-full relative">
+            <canvas id="pollutantChartCanvas"></canvas>
+          </div>
+
+          <div class="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between text-[11px] text-slate-400 gap-2">
+            <div class="flex items-center gap-2">
+              <span class="inline-block w-3 h-0.5 bg-red-500 border border-red-500 border-dashed"></span>
+              <span>Dashed red line represents national ambient 24-hr safety threshold (NAAQS).</span>
+            </div>
+            <span class="font-mono text-sky-400">Anand Air Station</span>
+          </div>
+        </div>
+
+        <!-- PANEL: Atmospheric Dispersion & Urban Environmental Scorecard (5 cols) -->
+        <div class="lg:col-span-5 p-5 rounded-xl bg-dark-950/80 border border-slate-800/90 flex flex-col justify-between space-y-4">
+          
+          <!-- Urban Score Header -->
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800/70">
+            <div class="flex items-center gap-2">
+              <i data-lucide="award" class="w-4 h-4 text-emerald-400"></i>
+              <span class="text-xs font-bold text-white uppercase tracking-wider">Urban Environmental Score</span>
+            </div>
+            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Optimal Grade A</span>
+          </div>
+
+          <!-- Score Value & Bar -->
+          <div class="text-center py-1">
+            <div class="text-4xl font-extrabold text-white font-mono tracking-tight">
+              94 <span class="text-base text-slate-400 font-normal">/ 100</span>
+            </div>
+            <div class="text-xs text-emerald-400 font-semibold mt-1">Excellent Urban Habitability Index</div>
+
+            <!-- Glowing progress bar -->
+            <div class="w-full bg-dark-800 rounded-full h-2.5 overflow-hidden border border-slate-800 mt-3">
+              <div class="bg-gradient-to-r from-teal-400 via-emerald-400 to-sky-400 h-full rounded-full shadow-lg shadow-emerald-500/50" style="width: 94%"></div>
+            </div>
+          </div>
+
+          <!-- Dispersion & Barometer Diagnostics -->
+          <div class="space-y-2.5 text-xs">
+            <div class="p-3 rounded-lg bg-dark-900/80 border border-slate-800/80">
+              <div class="text-[10px] uppercase font-semibold text-slate-400 flex items-center gap-1.5 mb-1">
+                <i data-lucide="wind" class="w-3.5 h-3.5 text-teal-400"></i>
+                Atmospheric Airflow Dispersion
+              </div>
+              <p id="analysisDispersion" class="text-[11px] text-slate-300 leading-relaxed">
+                Active Dispersion: Steady 16 km/h westerly airflow effectively ventilates Anand, mitigating ground-level pollutant accumulation.
+              </p>
+            </div>
+
+            <div class="p-3 rounded-lg bg-dark-900/80 border border-slate-800/80">
+              <div class="text-[10px] uppercase font-semibold text-slate-400 flex items-center gap-1.5 mb-1">
+                <i data-lucide="gauge" class="w-3.5 h-3.5 text-sky-400"></i>
+                Barometric Pressure Diagnostic
+              </div>
+              <p id="analysisBaroStatus" class="text-[11px] text-slate-300 leading-relaxed">
+                Stable Barometric Ridge (1011 hPa): Indicates steady weather conditions with low probability of storm formation.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800">
+            <span>Outdoor Activities: <b class="text-emerald-400">Recommended</b></span>
+            <span>Respiratory Risk: <b class="text-emerald-400">Minimal</b></span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Live Sync Footnote -->
+      <div class="p-3.5 rounded-xl bg-dark-950/60 border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex items-center gap-3">
+          <span class="font-bold text-white flex items-center gap-1.5">
+            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+            Active Station:
+          </span>
+          <span class="text-slate-200 font-medium">Anand, Gujarat, India</span>
+          <span class="text-slate-500">|</span>
+          <span class="text-slate-400">All temperature values &amp; Dew Point update dynamically with the <b class="text-sky-400 font-mono">°C / °F</b> switch</span>
+        </div>
+        <div class="flex items-center gap-4 text-slate-400 font-mono text-[11px]">
+          <span class="text-emerald-400">&bull; Live Synchronized Every 10s</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="mt-auto border-t border-slate-800/80 bg-dark-900/50 px-6 py-4 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-3">
+    <div>
+      Smart City Environmental Station &bull; Anand, Gujarat, India
+    </div>
+    <div class="flex items-center gap-4">
+      <span>Auto-Poll: <b class="text-emerald-400 font-mono">Every 10s</b></span>
+      <span>&bull;</span>
+      <a href="iot-dashboard.html" class="text-sky-400 hover:text-sky-300 underline font-medium">Switch to IoT Sensor Command Center &rarr;</a>
+    </div>
+  </footer>
+
+  <!-- Controller Script -->
+  <script type="module" src="js/weather-dashboard.js"></script>
+  <script>
+    lucide.createIcons();
+  </script>
+</body>
+</html>

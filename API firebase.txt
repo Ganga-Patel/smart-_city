@@ -1,0 +1,4 @@
+API : 
+AIzaSyC6BVnaEqgXYZK2MdRDxSK0lXiLWa7zDDc
+
+  databaseURL: "https://smartcity-61fad-default-rtdb.firebaseio.com",

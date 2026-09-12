@@ -1,0 +1,13 @@
+# ==========================================
+# Smart City Weather Station Telemetry File
+# Data Source: Local Sensor Station / Edge Node
+# ==========================================
+Temperature: 29.4 °C
+Humidity: 62.0 %
+
+# Metadata
+Last_Updated: 2026-09-06T03:52:43.232Z
+Station_ID: VVN-SmartCity-Node01
+Location: Anand, Gujarat
+Sensor_Type: DHT22 Digital Sensor
+Status: OPERATIONAL

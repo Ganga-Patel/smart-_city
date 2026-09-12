@@ -1,0 +1,12 @@
+weather api 
+https://weatherstack.com/?utm_source=Github&utm_medium=Referral&utm_campaign=Public-apis-repo-Best-sellers
+
+weather api key
+ec4f42c4481e2da61e4656ae48c1cd24 
+
+
+air api 
+$ curl -i "http://api.waqi.info/feed/anand/?token=demo"
+
+traffic api
+https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?key=YOUR_API_KEY&point=LAT,LON

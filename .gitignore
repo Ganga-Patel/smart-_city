@@ -1,0 +1,107 @@
+﻿# =============================================================================
+# Smart City Project - .gitignore
+# Covers Node.js, Express Webapp, React Native / Expo Mobile App & IoT Tools
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Dependencies
+# -----------------------------------------------------------------------------
+node_modules/
+*/node_modules/
+.pnp/
+.pnp.js
+jspm_packages/
+
+# -----------------------------------------------------------------------------
+# Sensitive Credentials & Secrets (DO NOT COMMIT)
+# -----------------------------------------------------------------------------
+*firebase-adminsdk*.json
+smartcity-*-firebase-adminsdk-*.json
+serviceAccountKey.json
+credentials.json
+client_secret*.json
+*.pem
+*.key
+*.cert
+*.pfx
+*.p12
+
+# Environment configuration files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.*.local
+
+# -----------------------------------------------------------------------------
+# React Native & Expo Framework
+# -----------------------------------------------------------------------------
+.expo/
+*/.expo/
+.expo-shared/
+*/.expo-shared/
+web-build/
+*/web-build/
+
+# Mobile application build outputs & signing keystores
+*.apk
+*.aab
+*.ipa
+*.jks
+*.keystore
+
+# -----------------------------------------------------------------------------
+# Production Builds & Temporary Caches
+# -----------------------------------------------------------------------------
+dist/
+build/
+out/
+.cache/
+.parcel-cache/
+.turbo/
+coverage/
+.nyc_output/
+
+# -----------------------------------------------------------------------------
+# Logs & Diagnostic Dumps
+# -----------------------------------------------------------------------------
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+firebase-debug.log*
+firestore-debug.log*
+
+# -----------------------------------------------------------------------------
+# Operating System Generated Files
+# -----------------------------------------------------------------------------
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# -----------------------------------------------------------------------------
+# IDE & Code Editor Files
+# -----------------------------------------------------------------------------
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo

@@ -1,0 +1,26 @@
+{
+  "name": "smartcity",
+  "version": "1.0.0",
+  "description": "Smart City IoT Dashboard and Bridge",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node webapp/server.js",
+    "start": "node webapp/server.js",
+    "bridge": "node bridge.js"
+  },
+  "keywords": [
+    "iot",
+    "smartcity",
+    "firebase",
+    "mqtt"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@firebase/app": "^0.16.0",
+    "express": "^5.2.1",
+    "firebase-admin": "^14.2.0",
+    "mqtt": "^5.15.2"
+  }
+}
