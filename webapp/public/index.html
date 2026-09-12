@@ -566,25 +566,27 @@
             <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90 flex flex-col items-center justify-center gap-2">
               <span id="trafficFreeFlowSpeed" class="text-[9px] font-mono text-slate-400 bg-dark-800 px-2 py-1 rounded border border-slate-700 w-full text-center">Baseline: 50 km/h</span>
               
-              <!-- Increased Ring Size -->
-              <div class="relative w-24 h-24">
-                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  <circle cx="50" cy="50" r="40" stroke="#1e293b" stroke-width="8" fill="transparent"/>
-                  <circle id="trafficCircleRing" cx="50" cy="50" r="40" stroke="url(#trafficAmberGrad)" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="175" stroke-linecap="round" fill="transparent" class="transition-all duration-1000"/>
-                  <defs>
-                    <linearGradient id="trafficAmberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stop-color="#10b981" />
-                      <stop offset="60%" stop-color="#f59e0b" />
-                      <stop offset="100%" stop-color="#ef4444" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <div class="absolute inset-0 flex flex-col items-center justify-center">
-                  <span id="trafficCongestionVal" class="text-2xl font-extrabold tracking-tight text-white font-mono">30%</span>
-                  <span id="trafficCongestionLabel" class="text-[8px] font-bold text-amber-400 uppercase tracking-wider text-center leading-none mt-0.5">MODERATE</span>
+              <!-- Ring and Text -->
+              <div class="flex flex-col items-center justify-center">
+                <div class="relative w-20 h-20 mb-1.5">
+                  <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" stroke="#1e293b" stroke-width="8" fill="transparent"/>
+                    <circle id="trafficCircleRing" cx="50" cy="50" r="40" stroke="url(#trafficAmberGrad)" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="175" stroke-linecap="round" fill="transparent" class="transition-all duration-1000"/>
+                    <defs>
+                      <linearGradient id="trafficAmberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#10b981" />
+                        <stop offset="60%" stop-color="#f59e0b" />
+                        <stop offset="100%" stop-color="#ef4444" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <span id="trafficCongestionVal" class="text-2xl font-extrabold tracking-tight text-white font-mono">30%</span>
+                  </div>
                 </div>
+                <span id="trafficCongestionLabel" class="text-[9px] font-bold text-amber-400 uppercase tracking-wider text-center">MODERATE</span>
               </div>
-              <div class="text-[8px] text-slate-500 font-mono text-center">Congestion Status</div>
+              <div class="text-[8px] text-slate-500 font-mono text-center mt-1">Congestion Status</div>
             </div>
           </div>
 
@@ -678,21 +680,23 @@
         
         <!-- 1. AQI Gauge & Score (Left Side) -->
         <div class="flex items-center gap-4 lg:w-1/3 w-full">
-          <div class="relative flex items-center justify-center w-24 h-24 flex-shrink-0">
-            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r="40" stroke="#1e293b" stroke-width="8" fill="transparent"/>
-              <circle id="aqiCircleRing" cx="50" cy="50" r="40" stroke="url(#aqiEmeraldGrad)" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="195" stroke-linecap="round" fill="transparent" class="transition-all duration-1000"/>
-              <defs>
-                <linearGradient id="aqiEmeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#10b981" />
-                  <stop offset="100%" stop-color="#38bdf8" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div class="absolute flex flex-col items-center justify-center">
-              <span id="airAqiScore" class="text-2xl font-extrabold tracking-tight text-white font-mono">43</span>
-              <span id="airAqiStatus" class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">GOOD</span>
+          <div class="flex flex-col items-center justify-center flex-shrink-0">
+            <div class="relative w-20 h-20 mb-1.5">
+              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" stroke="#1e293b" stroke-width="8" fill="transparent"/>
+                <circle id="aqiCircleRing" cx="50" cy="50" r="40" stroke="url(#aqiEmeraldGrad)" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="195" stroke-linecap="round" fill="transparent" class="transition-all duration-1000"/>
+                <defs>
+                  <linearGradient id="aqiEmeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#10b981" />
+                    <stop offset="100%" stop-color="#38bdf8" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="absolute inset-0 flex items-center justify-center">
+                <span id="airAqiScore" class="text-2xl font-extrabold tracking-tight text-white font-mono">43</span>
+              </div>
             </div>
+            <span id="airAqiStatus" class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">GOOD</span>
           </div>
           <div class="min-w-0">
             <div class="flex items-center gap-2 mb-1">
@@ -747,7 +751,7 @@
     <!-- ========================================================================= -->
     <!-- URBAN LIVE MAP CANVAS (MAPLIBRE GL + CARTO/OSM TILES — ANAND, GUJARAT)    -->
     <!-- ========================================================================= -->
-    <section id="urbanMapSection" class="glass-panel p-6 rounded-2xl border border-slate-800 bg-dark-900/70 shadow-2xl relative overflow-hidden space-y-4">
+    <section id="urbanMapSection" class="glass-panel p-4 sm:p-6 rounded-2xl border border-slate-800 bg-dark-900/70 shadow-2xl relative overflow-hidden space-y-4">
       <!-- Ambient decorative glow -->
       <div class="absolute -right-20 -top-20 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -765,28 +769,28 @@
                 <span id="mapStatusText">Map Canvas Active</span>
               </span>
             </div>
-            <p id="mapLocationSubtitle" class="text-xs text-slate-400">Interactive Spatial Telemetry Canvas &bull; Live Telemetry</p>
+            <p id="mapLocationSubtitle" class="text-[10px] sm:text-xs text-slate-400">Interactive Spatial Telemetry Canvas &bull; Live Telemetry</p>
           </div>
         </div>
 
         <!-- Quick Controls: Center View, Fullscreen, and Collapsible Hide/Show -->
         <div class="flex items-center flex-wrap gap-2">
           <!-- Center on Location Button -->
-          <button id="mapResetBtn" title="Center map camera on active location" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-800 text-slate-300 border border-slate-700 hover:border-sky-500 hover:text-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+          <button id="mapResetBtn" title="Center map camera on active location" class="px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-800 text-slate-300 border border-slate-700 hover:border-sky-500 hover:text-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
             <i data-lucide="locate-fixed" class="w-3.5 h-3.5 text-sky-400"></i>
-            <span id="mapResetText">Center on Location</span>
+            <span id="mapResetText" class="hidden sm:inline">Center on Location</span>
           </button>
 
           <!-- Fullscreen Toggle Button -->
-          <button id="mapFullscreenBtn" title="Toggle Fullscreen Map View" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-800 text-slate-300 border border-slate-700 hover:border-sky-500 hover:text-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+          <button id="mapFullscreenBtn" title="Toggle Fullscreen Map View" class="px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-800 text-slate-300 border border-slate-700 hover:border-sky-500 hover:text-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
             <i id="mapFullscreenIcon" data-lucide="maximize" class="w-3.5 h-3.5 text-slate-400"></i>
-            <span id="mapFullscreenText">Fullscreen</span>
+            <span id="mapFullscreenText" class="hidden sm:inline">Fullscreen</span>
           </button>
 
           <!-- Collapsible Hide / Show Map Button -->
-          <button id="mapToggleVisibilityBtn" title="Collapse or Expand Map Section" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-800 text-slate-300 border border-slate-700 hover:border-sky-500 hover:text-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+          <button id="mapToggleVisibilityBtn" title="Collapse or Expand Map Section" class="px-2 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-800 text-slate-300 border border-slate-700 hover:border-sky-500 hover:text-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
             <i id="mapToggleVisibilityIcon" data-lucide="chevron-up" class="w-3.5 h-3.5 text-sky-400"></i>
-            <span id="mapToggleVisibilityText">Hide Map</span>
+            <span id="mapToggleVisibilityText" class="hidden sm:inline">Hide Map</span>
           </button>
         </div>
       </div>
@@ -835,7 +839,7 @@
             </div>
 
             <!-- Collapsible HUD Body (Details + Filters + Navigation) -->
-            <div id="hudCollapsibleBody" class="p-2.5 space-y-2.5 transition-all duration-300 max-h-[520px] opacity-100">
+            <div id="hudCollapsibleBody" class="p-2.5 space-y-2.5 transition-all duration-300 max-h-[250px] sm:max-h-[350px] lg:max-h-[420px] overflow-y-auto opacity-100">
               <!-- SECTION 1: Selected Location Telemetry Metrics (Filtered by Active Checkboxes) -->
               <div id="hudTelemetryContainer" class="space-y-1.5">
                 <!-- 1. Live Weather Card (Shown ONLY when Weather filter is selected) -->
@@ -1386,6 +1390,21 @@
     }
     html.light-theme .text-slate-300 {
       color: #f8fafc !important;
+    }
+
+    /* Custom Scrollbar for HUD */
+    #hudCollapsibleBody::-webkit-scrollbar {
+      width: 4px;
+    }
+    #hudCollapsibleBody::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    #hudCollapsibleBody::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.3);
+      border-radius: 4px;
+    }
+    #hudCollapsibleBody::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.5);
     }
   </style>
 
