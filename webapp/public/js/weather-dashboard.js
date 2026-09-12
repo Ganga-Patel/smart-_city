@@ -20,12 +20,14 @@ class WeatherAirDashboard {
     this.timerId = null;
     this.latestData = null;
     
-    // Cached raw metric values in Celsius for dynamic unit conversion
-    this.rawSensorTempC = 26.0;
-    this.rawDewPointC = 15.4;
-    this.rawHeatIndexC = 27.2;
-    this.rawMinTempC = 22.0;
-    this.rawMaxTempC = 34.0;
+    // Cached raw API metric values in Celsius for dynamic unit conversion
+    // Temperature and humidity are taken strictly from Weather API (not from sensor)
+    this.rawApiTempC = 28.2;
+    this.rawApiHumidity = 68.0;
+    this.rawDewPointC = 21.8;
+    this.rawHeatIndexC = 31.3;
+    this.rawMinTempC = 24.0;
+    this.rawMaxTempC = 33.0;
     
     this.pollutantChart = null;
   }
@@ -85,33 +87,63 @@ class WeatherAirDashboard {
   }
 
   renderDashboard(data) {
-    const fb = data.firebaseSensor || {};
     const weather = data.cityWeather || {};
     const air = data.airQuality || {};
 
     // =========================================================================
-    // BOX 1: WEATHER & CLIMATE
+    // BOX 1: WEATHER CONDITIONS (TEMPERATURE, HUMIDITY & RAIN STRICTLY FROM WEATHER API)
     // =========================================================================
-    if (typeof fb.temperature === 'number') {
-      this.rawSensorTempC = fb.temperature;
+    if (typeof weather.temperature === 'number') {
+      this.rawApiTempC = weather.temperature;
     }
 
-    const humidValEl = document.getElementById('sensorHumidityVal');
+    const humid = typeof weather.humidity === 'number' ? weather.humidity : 68.0;
+    this.rawApiHumidity = humid;
+
+    const humidValEl = document.getElementById('weatherHumidityVal');
     if (humidValEl) {
-      humidValEl.textContent = typeof fb.humidity === 'number' ? fb.humidity.toFixed(1) : (fb.humidity || '47.0');
+      humidValEl.textContent = humid.toFixed(1);
     }
-    const humidBar = document.getElementById('sensorHumidityBar');
-    if (humidBar && typeof fb.humidity === 'number') {
-      humidBar.style.width = `${Math.min(Math.max(fb.humidity, 0), 100)}%`;
+    const humidBar = document.getElementById('weatherHumidityBar');
+    if (humidBar) {
+      humidBar.style.width = `${Math.min(Math.max(humid, 0), 100)}%`;
     }
-    const humidStatus = document.getElementById('sensorHumidityStatus');
-    if (humidStatus && typeof fb.humidity === 'number') {
-      if (fb.humidity < 30) humidStatus.textContent = 'Dry Air';
-      else if (fb.humidity <= 60) humidStatus.textContent = 'Optimal Comfort';
+    const humidStatus = document.getElementById('weatherHumidityStatus');
+    if (humidStatus) {
+      if (humid < 30) humidStatus.textContent = 'Dry Air';
+      else if (humid <= 60) humidStatus.textContent = 'Optimal Comfort';
       else humidStatus.textContent = 'High Moisture';
     }
 
-    // Weather API Data (Anand)
+    // Rain & Precipitation Telemetry from Weather API
+    const precipVal = weather.precipitation ?? weather.rain ?? 0.0;
+    const rainProb = weather.rainProbability ?? (precipVal > 0 ? 95 : 20);
+    const rainStatus = weather.rainStatus || (precipVal > 0 ? `${Number(precipVal).toFixed(1)} mm (Active Rain)` : '0.0 mm (No Active Rain)');
+
+    const precipValEl = document.getElementById('weatherPrecipVal');
+    if (precipValEl) precipValEl.textContent = `${Number(precipVal).toFixed(1)}`;
+
+    const rainProbEl = document.getElementById('weatherRainProbVal');
+    if (rainProbEl) rainProbEl.textContent = `${rainProb}%`;
+
+    const rainStatusEl = document.getElementById('weatherRainStatus');
+    if (rainStatusEl) {
+      rainStatusEl.textContent = rainStatus;
+      if (precipVal > 0) {
+        rainStatusEl.className = 'text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 border border-blue-500/40 animate-pulse';
+      } else if (rainProb >= 50) {
+        rainStatusEl.className = 'text-[10px] font-semibold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20';
+      } else {
+        rainStatusEl.className = 'text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+      }
+    }
+
+    const rainBarEl = document.getElementById('weatherRainBar');
+    if (rainBarEl) {
+      rainBarEl.style.width = `${Math.min(Math.max(rainProb, 5), 100)}%`;
+    }
+
+    // Atmospheric Telemetry (Anand Weather API)
     const condTextEl = document.getElementById('weatherConditionText');
     if (condTextEl) condTextEl.textContent = weather.condition || 'Partly Cloudy';
 
@@ -187,7 +219,7 @@ class WeatherAirDashboard {
     // =========================================================================
     // BOX 4: IN-DEPTH TELEMETRY & CLIMATE ANALYSIS
     // =========================================================================
-    this.computeAndRenderAnalysis(fb, weather, air, traffic);
+    this.computeAndRenderAnalysis(weather, air, traffic);
     this.updatePollutantChart(air);
 
     // Refresh icons
@@ -256,11 +288,11 @@ class WeatherAirDashboard {
   }
 
   /**
-   * Deep Analysis computations for Temperature & Humidity
+   * Deep Analysis computations for Temperature & Humidity (Weather API data)
    */
-  computeAndRenderAnalysis(fb, weather, air) {
-    const temp = this.rawSensorTempC;
-    const humidity = typeof fb.humidity === 'number' ? fb.humidity : 47;
+  computeAndRenderAnalysis(weather, air) {
+    const temp = this.rawApiTempC;
+    const humidity = this.rawApiHumidity;
     const windSpeed = weather.windSpeed ?? 16;
     const pressure = weather.pressure ?? 1011;
     const aqi = air.aqi ?? 43;
@@ -362,15 +394,15 @@ class WeatherAirDashboard {
     const toggleBtn = document.getElementById('tempUnitToggleBtn');
 
     if (this.isFahrenheit) {
-      const fTemp = (this.rawSensorTempC * 9 / 5) + 32;
+      const fTemp = (this.rawApiTempC * 9 / 5) + 32;
       const fDew = (this.rawDewPointC * 9 / 5) + 32;
       const fHeatIndex = (this.rawHeatIndexC * 9 / 5) + 32;
       const fMin = (this.rawMinTempC * 9 / 5) + 32;
       const fMax = (this.rawMaxTempC * 9 / 5) + 32;
 
-      // Box 1 Temperature
-      this.setText('sensorTempVal', fTemp.toFixed(1));
-      this.setText('sensorTempUnit', '°F');
+      // Box 1 Temperature (Weather API)
+      this.setText('weatherTempVal', fTemp.toFixed(1));
+      this.setText('weatherTempUnit', '°F');
 
       // Box 3: Temperature Deep Analysis Fields
       this.setText('analysisTempReading', `${fTemp.toFixed(1)} °F`);
@@ -384,12 +416,12 @@ class WeatherAirDashboard {
         toggleBtn.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/30 transition cursor-pointer flex items-center gap-1.5 shadow-sm';
       }
     } else {
-      // Box 1 Temperature
-      this.setText('sensorTempVal', this.rawSensorTempC.toFixed(1));
-      this.setText('sensorTempUnit', '°C');
+      // Box 1 Temperature (Weather API)
+      this.setText('weatherTempVal', this.rawApiTempC.toFixed(1));
+      this.setText('weatherTempUnit', '°C');
 
       // Box 3: Temperature Deep Analysis Fields
-      this.setText('analysisTempReading', `${this.rawSensorTempC.toFixed(1)} °C`);
+      this.setText('analysisTempReading', `${this.rawApiTempC.toFixed(1)} °C`);
       this.setText('analysisHeatIndexVal', `${this.rawHeatIndexC.toFixed(1)} °C`);
       this.setText('analysisTempRange', `${this.rawMinTempC.toFixed(0)}°C – ${this.rawMaxTempC.toFixed(0)}°C`);
       this.setText('analysisDewPointVal', `${this.rawDewPointC.toFixed(1)} °C`);

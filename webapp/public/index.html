@@ -64,7 +64,7 @@
             <span>Anand, Gujarat, India</span>
           </span>
         </div>
-        <p class="text-xs text-slate-400 font-medium">Real-Time Sensor Telemetry &amp; Urban Atmospheric Station</p>
+        <p class="text-xs text-slate-400 font-medium">Real-Time Weather API Telemetry &amp; Urban Atmospheric Station</p>
       </div>
     </div>
 
@@ -99,7 +99,7 @@
 
       <!-- ========================================================================= -->
       <!-- BOX 1: WEATHER CONDITIONS                                                 -->
-      <!-- - Temperature & Humidity: Real-time FROM SENSOR (Firebase)                 -->
+      <!-- - Temperature, Humidity & Rain: Real-time FROM WEATHER API                 -->
       <!-- - Other Weather Data: FROM WEATHER API (Anand, Gujarat, India)            -->
       <!-- - °C / °F Toggle: Directly beside the temperature value                    -->
       <!-- ========================================================================= -->
@@ -120,27 +120,27 @@
               </div>
             </div>
             <span class="px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1.5">
-              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Sensor &amp; Weather Active
+              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Live Weather API Active
             </span>
           </div>
 
-          <!-- 1. TEMPERATURE (FROM SENSOR) WITH °C / °F BUTTON RIGHT BESIDE THE VALUE -->
+          <!-- 1. TEMPERATURE (FROM WEATHER API) WITH °C / °F BUTTON RIGHT BESIDE THE VALUE -->
           <div class="p-4 rounded-xl bg-dark-950/80 border border-slate-800/90 mb-4">
             <div class="flex items-center justify-between mb-2">
               <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
                 <i data-lucide="thermometer" class="w-4 h-4 text-rose-400"></i>
-                Ambient Temperature <span class="text-[11px] font-mono text-violet-400 font-semibold">(Sensor)</span>
+                Ambient Temperature <span class="text-[11px] font-mono text-sky-400 font-semibold">(Weather API)</span>
               </span>
-              <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-violet-500/10 text-violet-400 border border-violet-500/20">
-                Firebase DHT22
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                Weather API • Anand
               </span>
             </div>
 
             <!-- Temperature Value + Unit + Toggle Button Directly Beside It -->
             <div class="flex items-center justify-between flex-wrap gap-2">
               <div class="flex items-baseline gap-1.5">
-                <span id="sensorTempVal" class="text-4xl font-extrabold tracking-tight text-white font-mono">--</span>
-                <span id="sensorTempUnit" class="text-2xl font-bold text-sky-400">°C</span>
+                <span id="weatherTempVal" class="text-4xl font-extrabold tracking-tight text-white font-mono">28.2</span>
+                <span id="weatherTempUnit" class="text-2xl font-bold text-sky-400">°C</span>
               </div>
 
               <!-- °C / °F Unit Toggle Button directly beside the temperature value -->
@@ -151,30 +151,66 @@
             </div>
           </div>
 
-          <!-- 2. HUMIDITY (FROM SENSOR) -->
+          <!-- 2. HUMIDITY (FROM WEATHER API) -->
           <div class="p-4 rounded-xl bg-dark-950/80 border border-slate-800/90 mb-4">
             <div class="flex items-center justify-between mb-1.5">
               <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
                 <i data-lucide="droplets" class="w-4 h-4 text-sky-400"></i>
-                Relative Humidity <span class="text-[11px] font-mono text-violet-400 font-semibold">(Sensor)</span>
+                Relative Humidity <span class="text-[11px] font-mono text-sky-400 font-semibold">(Weather API)</span>
               </span>
-              <span id="sensorHumidityStatus" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                Optimal Comfort
+              <span id="weatherHumidityStatus" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                Optimal Moisture
               </span>
             </div>
 
             <div class="flex items-baseline gap-1.5 mb-2">
-              <span id="sensorHumidityVal" class="text-3xl font-extrabold tracking-tight text-white font-mono">--</span>
+              <span id="weatherHumidityVal" class="text-3xl font-extrabold tracking-tight text-white font-mono">68</span>
               <span class="text-base font-bold text-slate-400">%</span>
             </div>
 
             <!-- Custom Progress Bar -->
             <div class="w-full bg-dark-800 rounded-full h-2 overflow-hidden border border-slate-800">
-              <div id="sensorHumidityBar" class="bg-gradient-to-r from-sky-500 to-cyan-400 h-full rounded-full transition-all duration-700" style="width: 47%"></div>
+              <div id="weatherHumidityBar" class="bg-gradient-to-r from-sky-500 to-cyan-400 h-full rounded-full transition-all duration-700" style="width: 68%"></div>
             </div>
           </div>
 
-          <!-- 3. OTHER WEATHER DATA FROM WEATHER API (ANAND, GUJARAT, INDIA) -->
+          <!-- 3. PRECIPITATION & RAINFALL (FROM WEATHER API) -->
+          <div class="p-4 rounded-xl bg-dark-950/80 border border-slate-800/90 mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                <i data-lucide="cloud-rain" class="w-4 h-4 text-cyan-400"></i>
+                Precipitation &amp; Rain <span class="text-[11px] font-mono text-cyan-400 font-semibold">(Weather API)</span>
+              </span>
+              <span id="weatherRainStatus" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                0.0 mm (72% Probability)
+              </span>
+            </div>
+
+            <div class="flex items-baseline justify-between mb-2">
+              <div class="flex items-baseline gap-1.5">
+                <span id="weatherPrecipVal" class="text-3xl font-extrabold tracking-tight text-white font-mono">0.0</span>
+                <span class="text-base font-bold text-slate-400">mm</span>
+              </div>
+              <div class="text-right">
+                <span class="text-xs text-slate-400">Rain Chance:</span>
+                <span id="weatherRainProbVal" class="text-sm font-bold font-mono text-cyan-400 ml-1">72%</span>
+              </div>
+            </div>
+
+            <!-- Rain Probability Progress Bar -->
+            <div class="space-y-1">
+              <div class="w-full bg-dark-800 rounded-full h-2 overflow-hidden border border-slate-800">
+                <div id="weatherRainBar" class="bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 h-full rounded-full transition-all duration-700" style="width: 72%"></div>
+              </div>
+              <div class="flex justify-between text-[9px] text-slate-500 font-mono pt-0.5">
+                <span>0 mm (Dry)</span>
+                <span>Light Rain</span>
+                <span>Heavy Showers</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4. OTHER WEATHER DATA FROM WEATHER API (ANAND, GUJARAT, INDIA) -->
           <div class="space-y-3">
             <div class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 pt-1">
               <i data-lucide="cloud" class="w-3.5 h-3.5 text-sky-400"></i>
@@ -187,7 +223,7 @@
                 <img id="weatherConditionIcon" src="" alt="Weather" class="w-8 h-8 rounded-lg bg-dark-800 p-0.5 border border-slate-700">
                 <div>
                   <div class="text-xs text-slate-400">Sky Condition</div>
-                  <div id="weatherConditionText" class="text-sm font-bold text-white">Partly Cloudy</div>
+                  <div id="weatherConditionText" class="text-sm font-bold text-white">Overcast</div>
                 </div>
               </div>
               <span class="text-[11px] font-mono text-slate-400 bg-dark-800 px-2 py-0.5 rounded border border-slate-700">Anand Live</span>
@@ -201,14 +237,14 @@
                   Wind Speed &amp; Heading
                 </div>
                 <div class="flex items-baseline gap-2">
-                  <span id="weatherWindSpeed" class="text-xl font-bold font-mono text-white">16 km/h</span>
-                  <span id="weatherWindDir" class="text-xs text-slate-400 font-mono">W (266°)</span>
+                  <span id="weatherWindSpeed" class="text-xl font-bold font-mono text-white">11 km/h</span>
+                  <span id="weatherWindDir" class="text-xs text-slate-400 font-mono">W (273°)</span>
                 </div>
               </div>
 
               <!-- Compass Rotating Indicator -->
               <div class="h-9 w-9 rounded-full bg-dark-800 border border-slate-700 flex items-center justify-center relative">
-                <div id="weatherCompassNeedle" class="w-5 h-5 flex items-center justify-center transition-transform duration-700" style="transform: rotate(266deg);">
+                <div id="weatherCompassNeedle" class="w-5 h-5 flex items-center justify-center transition-transform duration-700" style="transform: rotate(273deg);">
                   <i data-lucide="navigation-2" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
                 </div>
               </div>
@@ -218,7 +254,7 @@
             <div class="grid grid-cols-3 gap-2.5 text-center">
               <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
                 <div class="text-[10px] text-slate-400 mb-0.5">Air Pressure</div>
-                <div id="weatherPressure" class="text-xs font-bold text-white font-mono">1011 hPa</div>
+                <div id="weatherPressure" class="text-xs font-bold text-white font-mono">1004 hPa</div>
               </div>
               <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
                 <div class="text-[10px] text-slate-400 mb-0.5">UV Index</div>
@@ -234,7 +270,7 @@
         </div>
 
         <div class="pt-4 border-t border-slate-800/80 text-xs text-slate-500 flex items-center justify-between mt-4">
-          <span>Data Sources: Local Sensor + Weather API</span>
+          <span>Data Source: Live Weather API (Anand, Gujarat)</span>
           <span class="font-mono text-emerald-400">Updated Real-Time</span>
         </div>
       </section>
@@ -532,7 +568,7 @@
           </div>
           <div>
             <h2 class="text-base font-bold text-white tracking-tight">Environmental &amp; Microclimate Telemetry Analysis</h2>
-            <p class="text-xs text-slate-400">In-Depth Sensor Telemetry &bull; Urban Climate Insights &bull; Anand, Gujarat, India</p>
+            <p class="text-xs text-slate-400">In-Depth Weather Telemetry &bull; Urban Climate Insights &bull; Anand, Gujarat, India</p>
           </div>
         </div>
         <span class="px-3 py-1 rounded-full text-xs font-semibold bg-violet-500/10 text-violet-400 border border-violet-500/20 flex items-center gap-1.5">
@@ -552,7 +588,7 @@
               <div class="flex items-center gap-2">
                 <i data-lucide="thermometer" class="w-4 h-4 text-rose-400"></i>
                 <span class="text-xs font-bold text-white uppercase tracking-wider">Temperature Analysis</span>
-                <span class="text-[10px] font-mono text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">DHT22 Sensor</span>
+                <span class="text-[10px] font-mono text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">Weather API Telemetry</span>
               </div>
               <span id="analysisTempStatus" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                 Optimal Comfort
@@ -562,8 +598,8 @@
             <!-- Large Temperature Reading & Thermal Badge -->
             <div class="flex items-baseline justify-between mt-3 mb-4">
               <div>
-                <div class="text-[11px] text-slate-400 mb-0.5">Sensor Core Reading</div>
-                <div id="analysisTempReading" class="text-3xl sm:text-4xl font-extrabold font-mono text-white tracking-tight">26.0 °C</div>
+                <div class="text-[11px] text-slate-400 mb-0.5">Weather API Reading</div>
+                <div id="analysisTempReading" class="text-3xl sm:text-4xl font-extrabold font-mono text-white tracking-tight">28.2 °C</div>
               </div>
               <div class="text-right">
                 <div class="text-[11px] text-slate-400 mb-0.5">Thermal Comfort Zone</div>
@@ -577,15 +613,15 @@
             <div class="grid grid-cols-3 gap-2.5 text-center mb-4">
               <div class="p-2.5 rounded-lg bg-dark-900/90 border border-slate-800">
                 <div class="text-[10px] text-slate-400 mb-0.5">Heat Index (RealFeel)</div>
-                <div id="analysisHeatIndexVal" class="text-sm font-bold text-amber-400 font-mono">27.2 °C</div>
+                <div id="analysisHeatIndexVal" class="text-sm font-bold text-amber-400 font-mono">31.3 °C</div>
               </div>
               <div class="p-2.5 rounded-lg bg-dark-900/90 border border-slate-800">
                 <div class="text-[10px] text-slate-400 mb-0.5">Diurnal Range</div>
-                <div id="analysisTempRange" class="text-sm font-bold text-sky-400 font-mono">22°C – 34°C</div>
+                <div id="analysisTempRange" class="text-sm font-bold text-sky-400 font-mono">24°C – 33°C</div>
               </div>
               <div class="p-2.5 rounded-lg bg-dark-900/90 border border-slate-800">
                 <div class="text-[10px] text-slate-400 mb-0.5">Metabolic Stress</div>
-                <div class="text-sm font-bold text-emerald-400 font-mono">Low (0.4)</div>
+                <div class="text-sm font-bold text-emerald-400 font-mono">Low (0.5)</div>
               </div>
             </div>
 
@@ -600,7 +636,7 @@
                 <!-- Color gradient -->
                 <div class="w-full h-full rounded-full bg-gradient-to-r from-sky-400 via-emerald-400 via-amber-400 to-rose-500"></div>
                 <!-- Dynamic Spectrum Needle / Marker -->
-                <div id="analysisTempSpectrumMarker" class="absolute top-1/2 -translate-y-1/2 -ml-2 w-4 h-4 rounded-full bg-white border-2 border-slate-950 shadow-md shadow-black transition-all duration-700 pointer-events-none" style="left: 45.7%;"></div>
+                <div id="analysisTempSpectrumMarker" class="absolute top-1/2 -translate-y-1/2 -ml-2 w-4 h-4 rounded-full bg-white border-2 border-slate-950 shadow-md shadow-black transition-all duration-700 pointer-events-none" style="left: 52%;"></div>
               </div>
 
               <div class="flex justify-between text-[9px] text-slate-500 font-mono">
@@ -615,7 +651,7 @@
           <!-- Advisory takeaway -->
           <div class="p-3 rounded-lg bg-dark-900/70 border border-slate-800/80 text-[11px] text-slate-300 flex items-start gap-2">
             <i data-lucide="info" class="w-4 h-4 text-sky-400 shrink-0 mt-0.5"></i>
-            <span>Ambient reading is in the ideal physiological comfort zone. Low sweat evaporation load and balanced indoor/outdoor temperature delta.</span>
+            <span>Ambient reading is sourced live from Anand weather telemetry. Low sweat evaporation load with mild humidity interaction.</span>
           </div>
         </div>
 
@@ -627,7 +663,7 @@
               <div class="flex items-center gap-2">
                 <i data-lucide="droplets" class="w-4 h-4 text-sky-400"></i>
                 <span class="text-xs font-bold text-white uppercase tracking-wider">Humidity Analysis</span>
-                <span class="text-[10px] font-mono text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">DHT22 Sensor</span>
+                <span class="text-[10px] font-mono text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">Weather API Telemetry</span>
               </div>
               <span id="analysisHumidStatus" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
                 Optimal Moisture
@@ -637,8 +673,8 @@
             <!-- Large Humidity Reading & Comfort Badge -->
             <div class="flex items-baseline justify-between mt-3 mb-4">
               <div>
-                <div class="text-[11px] text-slate-400 mb-0.5">Sensor Core Reading</div>
-                <div id="analysisHumidReading" class="text-3xl sm:text-4xl font-extrabold font-mono text-white tracking-tight">47.0%</div>
+                <div class="text-[11px] text-slate-400 mb-0.5">Weather API Reading</div>
+                <div id="analysisHumidReading" class="text-3xl sm:text-4xl font-extrabold font-mono text-white tracking-tight">68.0%</div>
               </div>
               <div class="text-right">
                 <div class="text-[11px] text-slate-400 mb-0.5">Target Healthy Range</div>

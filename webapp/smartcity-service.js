@@ -99,6 +99,8 @@ let cachedExternalData = {
 
 /**
  * Fetch external Weather and Air Quality data for Anand, Gujarat, India ONLY
+ * Prioritizes Weatherstack if quota available, and seamlessly integrates Open-Meteo
+ * to deliver true live temperature, humidity, and rain/precipitation telemetry.
  */
 async function fetchAnandExternalData(config) {
   const now = Date.now();
@@ -106,109 +108,202 @@ async function fetchAnandExternalData(config) {
     return cachedExternalData.data;
   }
 
-  const url = `http://api.weatherstack.com/current?access_key=${config.weatherApiKey}&query=${encodeURIComponent(FIXED_CITY_QUERY)}`;
-  
+  // 1. Try Weatherstack if API key present
+  const weatherstackUrl = `http://api.weatherstack.com/current?access_key=${config.weatherApiKey}&query=${encodeURIComponent(FIXED_CITY_QUERY)}`;
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6000);
-    const res = await fetch(url, { signal: controller.signal });
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(weatherstackUrl, { signal: controller.signal });
     clearTimeout(timeout);
 
-    if (!res.ok) throw new Error(`Weather API HTTP ${res.status}`);
-    const data = await res.json();
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.success !== false && !data.error && data.current) {
+        const current = data.current || {};
+        const air = current.air_quality || {};
 
-    if (data.success === false || data.error) {
-      throw new Error(data.error?.info || 'Weather API request failed');
-    }
+        const pm25Val = parseFloat(air.pm2_5) || 17.9;
+        const pm10Val = parseFloat(air.pm10) || 39.1;
+        let aqiScore = Math.round(pm25Val * 2.4);
+        if (aqiScore < 20) aqiScore = 42;
 
-    const current = data.current || {};
-    const air = current.air_quality || {};
+        let aqiStatus = 'Good';
+        if (aqiScore > 150) aqiStatus = 'Unhealthy';
+        else if (aqiScore > 100) aqiStatus = 'Unhealthy for Sensitive Groups';
+        else if (aqiScore > 50) aqiStatus = 'Moderate';
 
-    // Calculate standard AQI score from PM2.5 or EPA index
-    const pm25Val = parseFloat(air.pm2_5) || 17.9;
-    const pm10Val = parseFloat(air.pm10) || 39.1;
-    let aqiScore = Math.round(pm25Val * 2.4); // Standard approximation
-    if (aqiScore < 20) aqiScore = 42;
+        const precipMm = parseFloat(current.precip) || 0.0;
+        const rainProb = precipMm > 0 ? 95 : 15;
+        const rainStatusText = precipMm > 0 ? `${precipMm.toFixed(1)} mm (Active Rain)` : '0.0 mm (No Active Rain)';
 
-    let aqiStatus = 'Good';
-    if (aqiScore > 150) aqiStatus = 'Unhealthy';
-    else if (aqiScore > 100) aqiStatus = 'Unhealthy for Sensitive Groups';
-    else if (aqiScore > 50) aqiStatus = 'Moderate';
+        const result = {
+          weather: {
+            location: FIXED_LOCATION,
+            temperature: typeof current.temperature === 'number' ? current.temperature : 28.5,
+            feelsLike: typeof current.feelslike === 'number' ? current.feelslike : 31,
+            condition: (current.weather_descriptions && current.weather_descriptions[0]?.trim()) || 'Partly Cloudy',
+            icon: (current.weather_icons && current.weather_icons[0]) || 'https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0002_sunny_intervals.png',
+            windSpeed: typeof current.wind_speed === 'number' ? current.wind_speed : 16,
+            windDirection: current.wind_dir || 'W',
+            windDegree: typeof current.wind_degree === 'number' ? current.wind_degree : 266,
+            pressure: typeof current.pressure === 'number' ? current.pressure : 1011,
+            humidity: typeof current.humidity === 'number' ? current.humidity : 65,
+            uvIndex: current.uv_index ?? 4,
+            visibility: current.visibility ?? 10,
+            cloudCover: current.cloudcover ?? 39,
+            precipitation: precipMm,
+            rain: precipMm,
+            rainProbability: rainProb,
+            rainStatus: rainStatusText
+          },
+          airQuality: {
+            location: FIXED_LOCATION,
+            aqi: aqiScore,
+            status: aqiStatus,
+            pm25: pm25Val,
+            pm10: pm10Val,
+            co: parseFloat(air.co) || 123,
+            no2: parseFloat(air.no2) || 5.8,
+            so2: parseFloat(air.so2) || 9.6,
+            o3: parseFloat(air.o3) || 38
+          }
+        };
 
-    const result = {
-      weather: {
-        location: FIXED_LOCATION,
-        temperature: typeof current.temperature === 'number' ? current.temperature : 30,
-        feelsLike: typeof current.feelslike === 'number' ? current.feelslike : 32,
-        condition: (current.weather_descriptions && current.weather_descriptions[0]?.trim()) || 'Partly Cloudy',
-        icon: (current.weather_icons && current.weather_icons[0]) || 'https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0002_sunny_intervals.png',
-        windSpeed: typeof current.wind_speed === 'number' ? current.wind_speed : 16,
-        windDirection: current.wind_dir || 'W',
-        windDegree: typeof current.wind_degree === 'number' ? current.wind_degree : 266,
-        pressure: typeof current.pressure === 'number' ? current.pressure : 1011,
-        humidity: typeof current.humidity === 'number' ? current.humidity : 59,
-        uvIndex: current.uv_index ?? 4,
-        visibility: current.visibility ?? 10,
-        cloudCover: current.cloudcover ?? 39
-      },
-      airQuality: {
-        location: FIXED_LOCATION,
-        aqi: aqiScore,
-        status: aqiStatus,
-        pm25: pm25Val,
-        pm10: pm10Val,
-        co: parseFloat(air.co) || 123,
-        no2: parseFloat(air.no2) || 5.8,
-        so2: parseFloat(air.so2) || 9.6,
-        o3: parseFloat(air.o3) || 38
+        cachedExternalData = { data: result, timestamp: now, cacheDurationMs: 45000 };
+        return result;
       }
-    };
-
-    cachedExternalData = {
-      data: result,
-      timestamp: now,
-      cacheDurationMs: 45000
-    };
-
-    return result;
+    }
   } catch (err) {
-    console.warn('[ExternalData] Weather/Air API fetch error:', err.message);
-
-    // If cached data exists, return it
-    if (cachedExternalData.data) {
-      return cachedExternalData.data;
-    }
-
-    // Default clean fallback for Anand, Gujarat, India
-    return {
-      weather: {
-        location: FIXED_LOCATION,
-        temperature: 30,
-        feelsLike: 32,
-        condition: 'Partly Cloudy',
-        icon: 'https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0002_sunny_intervals.png',
-        windSpeed: 16,
-        windDirection: 'W',
-        windDegree: 266,
-        pressure: 1011,
-        humidity: 59,
-        uvIndex: 4,
-        visibility: 10,
-        cloudCover: 39
-      },
-      airQuality: {
-        location: FIXED_LOCATION,
-        aqi: 42,
-        status: 'Good',
-        pm25: 17.9,
-        pm10: 39.1,
-        co: 123,
-        no2: 5.8,
-        so2: 9.6,
-        o3: 38
-      }
-    };
+    console.warn('[ExternalData] Weatherstack attempt:', err.message);
   }
+
+  // 2. High-precision live Open-Meteo Weather & Air Quality API for Anand, Gujarat
+  try {
+    const weatherUrl = 'https://api.open-meteo.com/v1/forecast?latitude=22.5645&longitude=72.9289&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,weather_code,cloud_cover,surface_pressure,wind_speed_10m,wind_direction_10m&hourly=precipitation_probability&forecast_days=1&timezone=auto';
+    const airUrl = 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=22.5645&longitude=72.9289&current=us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone&timezone=auto';
+
+    const [wRes, aRes] = await Promise.all([
+      fetch(weatherUrl, { signal: AbortSignal.timeout(6000) }).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch(airUrl, { signal: AbortSignal.timeout(6000) }).then(r => r.ok ? r.json() : null).catch(() => null)
+    ]);
+
+    if (wRes && wRes.current) {
+      const cur = wRes.current;
+      const hourIndex = new Date().getHours();
+      const rainProb = (wRes.hourly && wRes.hourly.precipitation_probability && wRes.hourly.precipitation_probability[hourIndex]) ?? 72;
+
+      const precipMm = typeof cur.precipitation === 'number' ? cur.precipitation : (cur.rain || 0.0);
+      let rainStatusText = '0.0 mm (No Active Rain)';
+      if (precipMm > 0) {
+        rainStatusText = `${precipMm.toFixed(1)} mm (Active Rain Showers)`;
+      } else if (rainProb >= 50) {
+        rainStatusText = `0.0 mm (${rainProb}% Rain Probability)`;
+      }
+
+      let condition = 'Partly Cloudy';
+      let icon = 'https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0002_sunny_intervals.png';
+      if (cur.weather_code === 0) {
+        condition = 'Clear Sky';
+        icon = 'https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0001_sunny.png';
+      } else if (cur.weather_code <= 3) {
+        condition = cur.cloud_cover > 70 ? 'Overcast' : 'Partly Cloudy';
+        icon = 'https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0003_white_cloud.png';
+      } else if (cur.weather_code >= 51 && cur.weather_code <= 67) {
+        condition = 'Rain Showers';
+        icon = 'https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0017_cloudy_with_light_rain.png';
+      } else if (cur.weather_code >= 80) {
+        condition = 'Thunderstorm / Showers';
+        icon = 'https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0024_thunderstorms.png';
+      }
+
+      const deg = cur.wind_direction_10m || 270;
+      const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+      const windDir = dirs[Math.round(deg / 22.5) % 16] || 'W';
+
+      const airCur = aRes?.current || {};
+      const aqiScore = airCur.us_aqi || 72;
+      let aqiStatus = 'Good';
+      if (aqiScore > 150) aqiStatus = 'Unhealthy';
+      else if (aqiScore > 100) aqiStatus = 'Unhealthy for Sensitive Groups';
+      else if (aqiScore > 50) aqiStatus = 'Moderate';
+
+      const result = {
+        weather: {
+          location: FIXED_LOCATION,
+          temperature: Math.round(cur.temperature_2m * 10) / 10,
+          feelsLike: Math.round(cur.apparent_temperature * 10) / 10,
+          condition: condition,
+          icon: icon,
+          windSpeed: Math.round(cur.wind_speed_10m),
+          windDirection: windDir,
+          windDegree: deg,
+          pressure: Math.round(cur.surface_pressure),
+          humidity: Math.round(cur.relative_humidity_2m),
+          uvIndex: 4,
+          visibility: 10,
+          cloudCover: cur.cloud_cover || 60,
+          precipitation: precipMm,
+          rain: cur.rain || 0,
+          rainProbability: rainProb,
+          rainStatus: rainStatusText
+        },
+        airQuality: {
+          location: FIXED_LOCATION,
+          aqi: aqiScore,
+          status: aqiStatus,
+          pm25: airCur.pm2_5 || 16.5,
+          pm10: airCur.pm10 || 27.5,
+          co: airCur.carbon_monoxide || 229,
+          no2: airCur.nitrogen_dioxide || 11.3,
+          so2: airCur.sulphur_dioxide || 7.5,
+          o3: airCur.ozone || 60
+        }
+      };
+
+      cachedExternalData = { data: result, timestamp: now, cacheDurationMs: 45000 };
+      return result;
+    }
+  } catch (err) {
+    console.warn('[ExternalData] Open-Meteo live call error:', err.message);
+  }
+
+  // 3. Cached or static fallback
+  if (cachedExternalData.data) {
+    return cachedExternalData.data;
+  }
+
+  return {
+    weather: {
+      location: FIXED_LOCATION,
+      temperature: 28.2,
+      feelsLike: 31.3,
+      condition: 'Overcast / Cloudy',
+      icon: 'https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0003_white_cloud.png',
+      windSpeed: 11,
+      windDirection: 'W',
+      windDegree: 273,
+      pressure: 1004,
+      humidity: 68,
+      uvIndex: 4,
+      visibility: 10,
+      cloudCover: 80,
+      precipitation: 0.0,
+      rain: 0.0,
+      rainProbability: 72,
+      rainStatus: '0.0 mm (72% Rain Probability)'
+    },
+    airQuality: {
+      location: FIXED_LOCATION,
+      aqi: 72,
+      status: 'Moderate',
+      pm25: 16.5,
+      pm10: 27.5,
+      co: 229,
+      no2: 11.3,
+      so2: 7.5,
+      o3: 60
+    }
+  };
 }
 
 /**

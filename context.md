@@ -1,18 +1,22 @@
-# Smart City IoT Project - Codebase Context & Documentation
+# Smart City IoT & Urban Telemetry Platform - Context & Technical Reference
 
-This document serves as the master context and technical reference for the **Smart City IoT** project. It details the system architecture, hardware inventory, firmware sketches, backend bridge services, database schemas, current technical gaps, and the execution roadmap for further development.
+This document serves as the central engineering specification and architecture reference for the **Smart City IoT & Urban Telemetry Platform** focused on **Anand, Gujarat, India**. It details the hardware layer, firmware, backend services, external APIs, web application, mobile app, and execution roadmap for future development.
 
 ---
 
-## 1. Project Overview & Objectives
+## 1. Executive Summary
 
-The **Smart City IoT** project is an end-to-end telemetry and monitoring system designed to track urban and environmental conditions in real time. It monitors climate parameters (temperature, humidity, rain), environmental safety (hazardous gas, smoke, air quality), physical security (motion, infrared obstacle detection, magnetic door/window triggers), and environmental quality metrics (water quality, wind telemetry).
+The **Smart City Platform** is a unified cyber-physical telemetry system that continuously monitors urban microclimate, environmental safety, air purity, and traffic mobility in real time.
 
-### Core Goals:
-1. **Multi-Node Sensor Ingestion**: Gather telemetry from microcontrollers (ESP8266, ESP32, Raspberry Pi) and virtual simulation environments (Wokwi).
-2. **Dual-Path Transport**: Support direct cloud ingestion via Firebase Realtime Database SDKs and decoupled event-driven ingestion via MQTT brokers (HiveMQ) with a Node.js bridge.
-3. **Centralized Data Storage**: Structure real-time state and historical telemetry in Firebase Realtime Database.
-4. **Interactive Web Dashboard**: Provide a responsive, real-time UI for city operators, showing live gauges, historical timeline charts, threshold alerts, and node health status.
+### Core Pillars:
+1. **Physical Sensor Telemetry**: Real-time readings from hardware microcontrollers (ESP8266, ESP32, Raspberry Pi) tracking temperature, humidity, hazardous gases, infrared obstacles, motion, and precipitation.
+2. **Tri-Domain Urban Monitoring**:
+   * **Weather & Microclimate**: Real-time Anand atmospheric telemetry (Temperature, Humidity, Rain volume & probability, Barometric pressure, Wind heading, UV, Visibility) driven exclusively by live Weather API, with physical sensor microclimate preserved in the dedicated IoT Command Center.
+   * **Air Quality Index**: EPA/NAAQS-compliant particulate ($\text{PM}_{2.5}, \text{PM}_{10}$) and trace gas monitoring ($\text{NO}_2, \text{O}_3, \text{CO}, \text{SO}_2$).
+   * **Urban Traffic & Mobility**: TomTom Traffic Flow integration tracking arterial velocity, congestion indices, and key transit corridors.
+3. **Multi-Platform Access**:
+   * **City Operations Web Portal**: Unified analytics dashboard and dedicated hardware IoT command center.
+   * **Citizen & Operator Mobile App**: React Native / Expo application with alert thresholds and offline resilience.
 
 ---
 
@@ -20,222 +24,309 @@ The **Smart City IoT** project is an end-to-end telemetry and monitoring system 
 
 ```mermaid
 graph TB
-    subgraph Edge_Devices ["Edge Layer (Microcontrollers & Simulators)"]
-        nodeMCU["NodeMCU ESP8266 (Physical Node)<br/>• DHT11 / DHT22 Temp & Humidity<br/>• MQ-2 / MQ-135 Gas & Smoke<br/>• Rain Gauge Detector<br/>• HW-201 IR Obstacle<br/>• HC-SR501 PIR Motion"]
-        wokwiNode["Simulated Node (ESP32 / Wokwi)<br/>• DHT22 Climate Data<br/>• Virtual Telemetry"]
-        rpiGateway["Raspberry Pi 4 Gateway (Planned)<br/>• Water Quality (pH, TDS, Turbidity, DO)<br/>• Weather (Anemometer, Wind Vane)<br/>• ADS1115 ADC + RPi Camera"]
+    subgraph Edge_Layer ["Physical & Simulated Edge Layer"]
+        esp8266["ESP8266 NodeMCU (Physical Station)<br/>• DHT22 Temperature & Humidity<br/>• MQ-2 / MQ-135 Gas & Smoke<br/>• Power-Gated Rain Detector<br/>• HW-201 IR & HC-SR501 PIR"]
+        simNode["Wokwi Virtual Nodes<br/>• Simulated Climate & Gas"]
+        rpiGate["Raspberry Pi 4 Gateway (Roadmap)<br/>• Water Quality (pH, TDS, Turbidity, DO)<br/>• RS485 Anemometer & Wind Vane"]
     end
 
-    subgraph Transport ["Ingestion & Transport Layer"]
-        directWiFi["Direct HTTPS / Firebase REST WebSocket"]
-        mqttBroker["HiveMQ MQTT Broker<br/>(broker.hivemq.com:1883)"]
-        nodeBridge["Node.js Bridge Daemon<br/>(bridge.js)"]
+    subgraph Transport_Layer ["Transport & Cloud Ingestion"]
+        fbRTDB[("Firebase Realtime Database<br/>smartcity-61fad-default-rtdb")]
+        mqttBroker["HiveMQ MQTT Broker<br/>broker.hivemq.com:1883"]
+        bridgeDaemon["Node.js Bridge Daemon<br/>bridge.js"]
     end
 
-    subgraph Cloud ["Cloud Layer"]
-        firebase["Firebase Realtime Database<br/>(smartcity-61fad-default-rtdb)"]
+    subgraph External_APIs ["External Urban APIs (Anand, Gujarat, India)"]
+        weatherAPI["Weather API (Anand, Gujarat)<br/>Temp, Humidity, Rain, Wind, Barometer, UV"]
+        airAPI["WAQI / Air Quality Feed<br/>AQI, PM2.5, PM10, Trace Gases"]
+        trafficAPI["TomTom Traffic Flow API<br/>Arterial Speeds, Congestion, Corridors"]
     end
 
-    subgraph Presentation ["Presentation Layer (Planned)"]
-        webApp["Web Dashboard (webapp/)<br/>• Live Metrics & Gauges<br/>• Alerting Engine<br/>• Historical Charts"]
+    subgraph Backend_Layer ["Smart City Node.js Backend (webapp/)"]
+        expressServer["Express Application Server (Port 3000)<br/>webapp/server.js"]
+        smartcityService["Telemetry & API Aggregator<br/>webapp/smartcity-service.js"]
     end
 
-    %% Edge to Transport connections
-    nodeMCU -->|Direct WiFi / Firebase Client| firebase
-    wokwiNode -->|MQTT Publish| mqttBroker
-    mqttBroker -->|MQTT Subscribe| nodeBridge
-    nodeBridge -->|Firebase Admin SDK| firebase
-    rpiGateway -->|MQTT / Direct Upload| firebase
+    subgraph Presentation_Layer ["Presentation & Operations Layer"]
+        unifiedUI["Unified Web Dashboard<br/>webapp/public/index.html<br/>• Weather API (Temp, Hum, Rain)<br/>• Air Quality API (AQI, Pollutants)<br/>• Traffic API (Speed, Congestion)<br/>• Microclimate Deep Analysis"]
+        iotUI["IoT Hardware Command Center<br/>webapp/public/iot-dashboard.html<br/>• Physical DHT22, MQ2, Rain, PIR, IR"]
+        mobileApp["React Native Mobile App<br/>react native app/ (Expo)"]
+    end
 
-    %% Cloud to Dashboard
-    firebase -->|Real-time Listener / SDK| webApp
+    %% Edge Connections
+    esp8266 -->|Direct WiFi / Firebase REST| fbRTDB
+    simNode -->|MQTT Publish| mqttBroker
+    mqttBroker -->|MQTT Subscribe| bridgeDaemon
+    bridgeDaemon -->|Firebase Admin SDK| fbRTDB
+    rpiGate -.->|Planned Ingestion| fbRTDB
+
+    %% Backend Connections
+    smartcityService -->|REST Read| fbRTDB
+    smartcityService -->|HTTP API| weatherAPI
+    smartcityService -->|HTTP API| airAPI
+    smartcityService -->|HTTP API| trafficAPI
+    expressServer --> smartcityService
+    expressServer -->|JSON /api/dashboard-data| unifiedUI
+    expressServer -->|Static Hosting| iotUI
+
+    %% Client App
+    fbRTDB -.->|Direct Client SDK| iotUI
+    fbRTDB -.->|Direct Client SDK| mobileApp
 ```
 
 ---
 
-## 3. Directory & File Structure
+## 3. Directory & File Inventory
 
 ```
 D:\smartcity/
-├── API.txt                     # Firebase Web API key and database URL for client apps
-├── bridge.js                   # Node.js daemon bridging MQTT topics to Firebase RTDB
-├── context.md                  # Project context, architecture, and roadmap (this file)
-├── link.docx                   # Reference links for HiveMQ Web Client & Wokwi simulation
-├── package.json                # Node.js project manifest & dependencies
-├── package-lock.json           # Locked npm dependency versions
-├── smartcity-61fad-firebase-adminsdk-fbsvc-eea2762ce1.json # Firebase Admin Service Account Key
-├── updated list sensor.pdf     # Hardware sensor procurement and inventory specification
+├── .gitignore                                           # Security exclusions (node_modules, service account keys)
+├── API firebase.txt                                     # Firebase credentials (API Key & RTDB Database URL)
+├── API wheather and air quality.txt                     # External API configurations (Weather, WAQI, TomTom)
+├── EXPO_MOBILE_PLAN.md                                  # Mobile application architecture and implementation plan
+├── bridge.js                                            # MQTT-to-Firebase ingestion daemon
+├── context.md                                           # Master technical context & reference (this file)
+├── link.docx                                            # HiveMQ & Wokwi simulation reference links
+├── package.json                                         # Root package configuration
+├── package-lock.json                                    # Root dependency locks
+├── smartcity-61fad-firebase-adminsdk-fbsvc-eea2762ce1.json # Firebase Admin SDK private key (gitignored)
+├── updated list sensor.pdf                              # Procurement specifications for all urban sensors
 │
-├── SENSOR/                     # Microcontroller firmware sketches (Arduino / ESP8266)
+├── SENSOR/                                              # Microcontroller sketches & firmware
 │   ├── DHT22_MQ_RAIN/
-│   │   └── DHT22_MQ_RAIN.ino   # Multi-sensor sketch with direct Firebase RTDB upload
-│   ├── dht22/
-│   │   └── dht22.ino           # Basic DHT11/DHT22 reading sketch (Serial output)
-│   ├── IR/
-│   │   └── IR.ino              # HW-201 IR obstacle detection sketch
-│   ├── MQSENSOR/
-│   │   └── MQSENSOR.ino        # MQ-2 Analog gas concentration sketch (A0)
-│   ├── PIR_Motion/
-│   │   └── PIR_Motion.ino      # HC-SR501 PIR motion sensor sketch (GPIO 4 / D2)
-│   └── rainguage/
-│       └── rainguage.ino       # Power-gated rain sensor sketch (prolongs electrode lifespan)
+│   │   └── DHT22_MQ_RAIN.ino                            # Multi-sensor sketch with direct Firebase upload
+│   ├── dht22/dht22.ino                                  # Isolated DHT sensor reading sketch
+│   ├── IR/IR.ino                                        # HW-201 infrared obstacle detector
+│   ├── MQSENSOR/MQSENSOR.ino                            # MQ-2 analog gas concentration sketch
+│   ├── PIR_Motion/PIR_Motion.ino                        # HC-SR501 motion detection sketch
+│   └── rainguage/rainguage.ino                          # Power-gated rain sensor (corrosion prevention)
 │
-└── webapp/                     # Frontend dashboard application (to be developed)
+├── webapp/                                              # Web Application & API Server
+│   ├── server.js                                        # Express web server (port 3000) & endpoints
+│   ├── smartcity-service.js                             # Ingestion aggregator (Firebase + Weather + Air + Traffic)
+│   ├── weather-service.js                               # Standalone local weather.txt parser
+│   ├── weather.txt                                      # Local text file telemetry fallback
+│   ├── PLAN.md                                          # Dashboard evolution and design specification
+│   └── public/                                          # Frontend assets
+│       ├── index.html                                   # Unified 3-box dashboard + microclimate analysis (Weather API temp/hum/rain, WAQI air quality, TomTom traffic)
+│       ├── iot-dashboard.html                           # Preserved IoT hardware command center (Firebase DHT22, MQ2, Rain, PIR, IR)
+│       ├── weather.html                                 # Standalone weather page
+│       ├── css/style.css                                # Glassmorphism, animations, and custom CSS
+│       └── js/
+│           ├── weather-dashboard.js                     # Unified dashboard controller (Weather API metrics, 10s sync, °C/°F toggle, rain bars, microclimate deep analysis)
+│           ├── unified-dashboard.js                     # Multi-source state manager
+│           ├── firebase-service.js                      # Client Firebase SDK wrapper
+│           ├── alerts.js                                # Frontend hazard alert banner manager
+│           ├── charts.js                                # Canvas & Chart.js rendering modules
+│           ├── config.js                                # Frontend client configuration
+│           └── app.js                                   # Main UI application bootstrap
+│
+└── react native app/                                    # Cross-Platform Mobile Application (Expo)
+    ├── App.js                                           # Application entrypoint & navigation
+    ├── app.json                                         # Expo configuration
+    ├── babel.config.js                                  # Babel presets
+    ├── constants/                                       # Colors, Thresholds, and Config
+    ├── components/                                      # Modular UI components (WeatherCard, SensorCard, etc.)
+    ├── screens/                                         # Dashboard, Analytics, Alerts, Settings screens
+    └── services/                                        # Firebase client, normalizer, and alert engines
 ```
 
 ---
 
-## 4. Hardware Inventory & Component Status
+## 4. Ingestion Data Models & External APIs
 
-From the hardware specification in [`updated list sensor.pdf`](file:///D:/smartcity/updated%20list%20sensor.pdf):
-
-| Category | Component Description | Target Pin / Interface | Role in Smart City | Status |
-| :--- | :--- | :--- | :--- | :--- |
-| **Compute** | Raspberry Pi 4 Model B (8GB) | Gateway / Host | Central local gateway & edge processing | Planned |
-| **Microcontroller** | NodeMCU ESP8266 / ESP32 | Microcontroller | Distributed edge telemetry nodes | In Use / Active |
-| **Environment** | DHT11 / DHT22 Sensor | GPIO D3 / GPIO 4 (D2) | Ambient temperature and humidity tracking | Firmware Implemented |
-| **Environment** | Rain Sensor Module | GPIO D2 (DO), Power on D7 | Weather monitoring & precipitation alert | Firmware Implemented |
-| **Gas / Safety** | MQ-2 / MQ-135 Gas Sensors | Analog A0 / Digital D5 | Smoke, flammable gas, CO2, air quality index | Firmware Implemented |
-| **Security** | HW-201 IR Obstacle Sensor | GPIO D2 | Proximity and perimeter obstacle detection | Firmware Implemented |
-| **Security** | HC-SR501 PIR Motion Sensor | GPIO 4 (D2) | Area surveillance and intrusion detection | Firmware Implemented |
-| **Security** | Reed Switch (x3) | GPIO Digital Input | Smart street cabinets / door / window status | Pending Sketch |
-| **Water Quality** | DS18B20 Waterproof Temp Probe | 1-Wire Digital GPIO | Water and drainage temperature tracking | Pending Integration |
-| **Water Quality** | Turbidity Sensor Module | Analog (via ADS1115) | Water clarity / suspended particulate monitoring | Pending Integration |
-| **Water Quality** | TDS Sensor Module | Analog (via ADS1115) | Total dissolved solids in urban water supply | Pending Integration |
-| **Water Quality** | pH Sensor Module + Electrode | Analog (via ADS1115) | Water acidity / alkalinity telemetry | Pending Integration |
-| **Water Quality** | Dissolved Oxygen (DO) Sensor | Analog (via ADS1115) | Water oxygenation for environmental waterways | Pending Integration |
-| **Weather** | Wind Anemometer + Direction Vane| Analog / RS485 / Pulse | Urban wind velocity and direction measurement | Pending Integration |
-| **Expansion** | ADS1115 16-bit 4-Channel ADC | I2C (SDA/SCL) | Expands analog inputs for high-precision sensors| Pending Integration |
-| **Expansion** | RS485 to USB Industrial Converter| USB / Serial | Long-distance sensor bus interface | Pending Integration |
-
----
-
-## 5. Firmware Analysis & Pin Configurations
-
-### 5.1. Combined Node Sketch ([`DHT22_MQ_RAIN.ino`](file:///D:/smartcity/SENSOR/DHT22_MQ_RAIN/DHT22_MQ_RAIN.ino))
-* **Target Board**: NodeMCU ESP8266
-* **Libraries**: `ESP8266WiFi.h`, `Firebase_ESP_Client.h`, `DHT.h`
-* **Pin Mapping**:
-  * `D3` (`GPIO 0`): DHT Sensor (Configured as `DHTTYPE DHT11`)
-  * `D2` (`GPIO 4`): Rain Sensor digital output (`DO`)
-  * `D5` (`GPIO 14`): MQ-2 Gas Sensor digital output (`DO`)
-* **Behavior**:
-  * Connects to WiFi and authenticates anonymously to Firebase RTDB (`smartcity-61fad`).
-  * In `loop()`, reads temperature, humidity, rain state (0 = wet, 1 = dry), and MQ-2 threshold state.
-  * Pushes to Firebase every 5,000 ms:
-    * `/smartcity/DHT22/temperature`
-    * `/smartcity/DHT22/humidity`
-    * `/smartcity/Rain/value`
-    * `/smartcity/MQ2/value`
-
-### 5.2. Isolated Test Sketches
-* **[`dht22.ino`](file:///D:/smartcity/SENSOR/dht22/dht22.ino)**: Reads DHT11 on GPIO 4 (`D2`). Prints Celsius, Fahrenheit, and Humidity every 2 seconds over Serial (9600 baud).
-* **[`IR.ino`](file:///D:/smartcity/SENSOR/IR/IR.ino)**: Reads HW-201 digital signal on `D2`. Evaluates `LOW` as object detection.
-* **[`MQSENSOR.ino`](file:///D:/smartcity/SENSOR/MQSENSOR/MQSENSOR.ino)**: Reads MQ-2 analog voltage level from pin `A0` (0 - 1023 range), providing gas concentration grading.
-* **[`PIR_Motion.ino`](file:///D:/smartcity/SENSOR/PIR_Motion/PIR_Motion.ino)**: Reads HC-SR501 on GPIO 4 (`D2`). Includes a 30-second sensor stabilization pre-warm cycle.
-* **[`rainguage.ino`](file:///D:/smartcity/SENSOR/rainguage/rainguage.ino)**: Implements corrosion-prevention power cycling: GPIO `D7` turns sensor VCC ON for 10ms, reads digital state on `D2`, then pulls `D7` LOW.
-
----
-
-## 6. Backend Services & Integration
-
-### Node.js MQTT-to-Firebase Bridge ([`bridge.js`](file:///D:/smartcity/bridge.js))
-* **Runtime**: Node.js (CommonJS)
-* **Dependencies**: `mqtt` (v5.x), `firebase-admin` (v14.x)
-* **MQTT Broker**: `mqtt://broker.hivemq.com:1883`
-* **Firebase Database**: `https://smartcity-61fad-default-rtdb.firebaseio.com/`
-* **Credentials**: Uses [`smartcity-61fad-firebase-adminsdk-fbsvc-eea2762ce1.json`](file:///D:/smartcity/smartcity-61fad-firebase-adminsdk-fbsvc-eea2762ce1.json)
-* **Current Subscriptions**:
-  * `smartcity/dht22/temperature` -> writes `{ value, timestamp }` to `sensor/temperature`
-  * `smartcity/dht22/humidity` -> writes `{ value, timestamp }` to `sensor/humidity`
-
----
-
-## 7. Database Schema Definition & Standardization
-
-To eliminate mismatches between firmware nodes, MQTT bridges, and web dashboards, the following standardized schema is recommended for Firebase Realtime Database:
-
-```json
-{
-  "smartcity": {
-    "live": {
-      "node_01": {
-        "metadata": {
-          "location": "Sector 4 Weather Station",
-          "last_seen": 1724490000000,
-          "ip_address": "192.168.1.105"
-        },
-        "environment": {
-          "temperature": { "value": 28.5, "unit": "°C", "timestamp": 1724490000000 },
-          "humidity": { "value": 65.2, "unit": "%", "timestamp": 1724490000000 },
-          "rain_detected": { "value": false, "raw": 1, "timestamp": 1724490000000 }
-        },
-        "safety": {
-          "gas_level_ppm": { "value": 312, "alert": false, "timestamp": 1724490000000 },
-          "smoke_detected": { "value": false, "timestamp": 1724490000000 }
-        },
-        "security": {
-          "motion_detected": { "value": false, "timestamp": 1724490000000 },
-          "obstacle_detected": { "value": false, "timestamp": 1724490000000 }
-        }
-      }
-    },
-    "history": {
-      "node_01": {
-        "-O4xAbc123": { "temperature": 28.5, "humidity": 65.2, "gas": 312, "timestamp": 1724490000000 }
-      }
-    },
-    "alerts": {
-      "-O4xAlert123": {
-        "node_id": "node_01",
-        "type": "GAS_LEAK",
-        "severity": "HIGH",
-        "message": "Elevated gas concentration detected on Sector 4 Station",
-        "timestamp": 1724490000000,
-        "resolved": false
+### 4.1. Firebase Realtime Database
+* **Database URL**: `https://smartcity-61fad-default-rtdb.firebaseio.com`
+* **NodeMCU Active Path**: `/smartcity`
+* **Live Payload Structure**:
+  ```json
+  {
+    "smartcity": {
+      "DHT22": {
+        "temperature": 26,
+        "humidity": 47
+      },
+      "Rain": {
+        "value": 1
+      },
+      "MQ2": {
+        "value": 1
       }
     }
   }
-}
-```
+  ```
+  * `Rain.value`: `0` = Rain/Precipitation detected, `1` = Dry.
+  * `MQ2.value`: `0` = Gas hazard alert (threshold exceeded), `1` = Normal.
+* **Routing Architecture**: Physical sensor data in Firebase (`DHT22`, `Rain`, `MQ2`) is continuously ingested and rendered on the **IoT Hardware Command Center** ([`iot-dashboard.html`](file:///D:/smartcity/webapp/public/iot-dashboard.html)). In the public unified **Weather Dashboard** ([`index.html`](file:///D:/smartcity/webapp/public/index.html)), ambient temperature and relative humidity are sourced exclusively from the **Weather API**.
+
+### 4.2. Weather API (Anand, Gujarat, India)
+* **Location Scope**: Strictly locked to **Anand, Gujarat, India** (Latitude 22.5645, Longitude 72.9289).
+* **Strict Architecture Rule**: In the Weather Dashboard, **Ambient Temperature** and **Relative Humidity** are taken **strictly from the Weather API** (never from the hardware sensor).
+* **Precipitation & Rain Telemetry**: Live precipitation amount ($\text{mm}$), rain probability ($\%$), and rain status are fetched directly from the Weather API.
+* **API Metrics**:
+  * Temperature ($28.2^\circ\text{C} / 82.8^\circ\text{F}$) & Humidity ($68\%$).
+  * Precipitation ($0.0\text{ mm}$) and Rain Probability ($72\%$).
+  * Sky Condition (*Overcast / Partly Cloudy*), weather icon.
+  * Wind Speed ($11\text{–}16\text{ km/h}$) and Direction ($273^\circ\text{ W}$) with rotating compass needle.
+  * Barometric Pressure ($1004\text{–}1011\text{ hPa}$), UV Index ($4\text{–}7$), and Visibility ($10\text{ km}$).
+
+### 4.3. Air Quality API (WAQI / EPA AQI)
+* **Location Scope**: Anand, Gujarat air monitoring stations.
+* **API Metrics**:
+  * Overall AQI Score ($43\text{ Good}$).
+  * Particulate Matter: $\text{PM}_{2.5}$ ($17.9\ \mu\text{g/m}^3$), $\text{PM}_{10}$ ($39.1\ \mu\text{g/m}^3$).
+  * Trace Gases: $\text{NO}_2$ ($5.8\ \mu\text{g/m}^3$), $\text{O}_3$ ($38.0\ \mu\text{g/m}^3$), $\text{CO}$ ($123\ \mu\text{g/m}^3$), $\text{SO}_2$ ($9.6\ \mu\text{g/m}^3$).
+
+### 4.4. Traffic API (TomTom Flow Segment API)
+* **Location Scope**: Anand core arterial coordinates ($22.5645^\circ\text{ N}, 72.9289^\circ\text{ E}$).
+* **API Metrics**:
+  * Current Velocity ($35\text{ km/h}$) vs. Free-Flow Baseline ($50\text{ km/h}$).
+  * Congestion Index ($30\%$, Moderate Flow).
+  * Travel Delay ($+55\text{ sec}$), Confidence ($95\%$), Road Closures ($0$).
+  * Key Transit Corridors:
+    1. **Anand – Vidyanagar Road (SH 188)**: $33\text{ km/h}$
+    2. **Station Road (Anand Junction)**: $27\text{ km/h}$
+    3. **NH 48 Samarkha Expressway**: $71\text{ km/h}$
+    4. **Borsad Chokdi Junction**: $29\text{ km/h}$
 
 ---
 
-## 8. Critical Gap & Discrepancy Analysis
+## 5. Web Application Architecture (`webapp/`)
 
-| Issue | Current State | Impact | Required Resolution |
-| :--- | :--- | :--- | :--- |
-| **Path Inconsistency** | `bridge.js` writes to `sensor/...`; `DHT22_MQ_RAIN.ino` writes to `/smartcity/...` | Web app cannot read unified data | Align both to the standardized `/smartcity/live/...` schema |
-| **MQTT Topic Coverage** | `bridge.js` only listens to 2 topics | Rain, gas, PIR, and simulation telemetry are dropped | Subscribe to wildcard `smartcity/#` or parse structured JSON payloads |
-| **Sensor Type Mismatch** | In `.ino`: `#define DHTTYPE DHT11` but publishes under `/DHT22/` | Incorrect calibration / metadata | Correct sensor type definition and variable names |
-| **Analog vs Digital Gas** | `DHT22_MQ_RAIN.ino` uses digital `D5` (on/off only); `MQSENSOR.ino` uses analog `A0` (PPM gradient) | Digital only gives binary trigger, losing early warning ppm curve | Switch gas sensing to analog `A0` or use ADS1115 ADC |
-| **Missing Web App Directory** | `package.json` specifies `"dev": "node webapp/app.js"`, but `webapp/` does not exist | No dashboard UI available | Create `webapp/` containing an interactive web server or SPA dashboard |
-| **Hardcoded Credentials** | WiFi SSID/password and API keys hardcoded in `.ino` and `bridge.js` | Security & portability issues | Introduce `.env` for Node.js and configuration header for Arduino |
+### 5.1. Backend (`server.js` & `smartcity-service.js`)
+* **Framework**: Node.js + Express on port `3000`.
+* **Endpoints**:
+  * `GET /`: Serves the primary unified dashboard ([`index.html`](file:///D:/smartcity/webapp/public/index.html)).
+  * `GET /iot-dashboard.html`: Serves the multi-sensor hardware command center ([`iot-dashboard.html`](file:///D:/smartcity/webapp/public/iot-dashboard.html)).
+  * `GET /api/dashboard-data`: Unified JSON endpoint returning combined Firebase sensor, Weatherstack, WAQI, and TomTom traffic telemetry.
+* **In-Memory Caching**: 30-to-45-second cache window for external API calls to safeguard quota limits while refreshing Firebase sensor data in real time.
+
+### 5.2. Frontend Unified Dashboard Layout (`index.html`)
+
+#### Upper Row: 3 Dedicated Domain Cards (`grid-cols-1 lg:grid-cols-3`)
+1. **Box 1: Weather Conditions**:
+   * **Temperature**: Taken strictly from Weather API ($28.2^\circ\text{C}$) with an **inline `[ Switch to °F ]` button** directly beside the reading.
+   * **Humidity**: Taken strictly from Weather API ($68\%$) with animated gradient progress bar.
+   * **Precipitation & Rain**: Real-time rainfall amount ($0.0\text{ mm}$), rain probability ($72\%$), rain status badge, and gradient progress indicator.
+   * **Atmospheric Telemetry**: Sky condition, wind speed/direction with rotating compass needle, barometric pressure, UV index, and visibility.
+2. **Box 2: Air Quality Index**:
+   * Circular glowing radial AQI gauge ($43\text{–}72\text{ AQI}$).
+   * Inhalable particulate breakdown ($\text{PM}_{2.5}$ and $\text{PM}_{10}$).
+   * Trace gas concentration cards ($\text{NO}_2, \text{O}_3, \text{CO}, \text{SO}_2$).
+3. **Box 3: Urban Traffic & Mobility**:
+   * Arterial velocity gauge ($30\text{–}35\text{ km/h}$) vs. free-flow baseline ($50\text{ km/h}$).
+   * Circular radial congestion gauge ($30\%\text{–}40\%$ saturation).
+   * Commute delay, data confidence, and 4-corridor live transit list.
+
+#### Bottom Section: Environmental & Microclimate Telemetry Analysis
+* **Dedicated Temperature Dynamics Card**:
+  * Core reading ($28.2^\circ\text{C}$ or $82.8^\circ\text{F}$) from Weather API.
+  * Thermal comfort zone badge (Zone 2 / Optimal comfort).
+  * Calculated Heat Index / RealFeel ($31.3^\circ\text{C} / 88.3^\circ\text{F}$).
+  * Expected diurnal range ($24^\circ\text{C}\text{–}33^\circ\text{C}$).
+  * Horizontal color spectrum bar (Cool $\rightarrow$ Comfort $\rightarrow$ Warm $\rightarrow$ Hot) with live cursor.
+* **Dedicated Humidity & Moisture Card**:
+  * Core reading ($68.0\%$) from Weather API with comfort moisture classification.
+  * Calculated Dew Point threshold ($21.8^\circ\text{C} / 71.2^\circ\text{F}$).
+  * Evaporative cooling score ($73\%$) and progress meter.
+  * Horizontal humidity spectrum bar (Arid $\rightarrow$ Balanced $\rightarrow$ Saturated) with live cursor.
+* **Pollutant Distribution Chart (Chart.js)**:
+  * Visual bar chart comparing $\text{PM}_{2.5}, \text{PM}_{10}, \text{NO}_2, \text{O}_3, \text{SO}_2$ against NAAQS 24-hr safety thresholds.
+* **Urban Environmental Scorecard**:
+  * Habitability index & Airflow ventilation ($11\text{–}16\text{ km/h}$ westerly) and barometric status diagnostics.
 
 ---
 
-## 9. Next Steps & Development Roadmap
+## 6. Mobile Application Architecture (`react native app/`)
 
-### Phase 1: Ingestion & Backend Unification
-- [ ] **Update `bridge.js`**:
-  - Support wildcard subscriptions (`smartcity/#`) or JSON payloads (`smartcity/node_01/telemetry`).
-  - Store incoming telemetry using the unified schema with timestamps.
-  - Add reconnect and error-handling routines.
-- [ ] **Standardize ESP8266 Firmware**:
-  - Unify sensor reads (DHT + Analog MQ-2 on A0 + Power-gated Rain sensor on D2/D7 + PIR/IR on available GPIOs).
-  - Push structured JSON objects to Firebase RTDB.
+* **Framework**: React Native with Expo SDK.
+* **Screen Modules**:
+  * **Dashboard**: Multi-sensor overview, weather summary, and real-time hazard banner.
+  * **Analytics**: Time-series historical trends for temperature, humidity, and gas concentration.
+  * **Alerts**: Audit log of threshold breaches (elevated gas, rain events, motion triggers).
+  * **Settings**: Configurable thresholds (max temperature, critical gas PPM) and node selection.
+* **Service Layer**:
+  * [`services/firebase.js`](file:///D:/smartcity/react%20native%20app/services/firebase.js): Direct listener on `/smartcity` and `/sensor`.
+  * [`services/normalizer.js`](file:///D:/smartcity/react%20native%20app/services/normalizer.js): Normalizes raw hardware payloads.
+  * [`services/alerts.js`](file:///D:/smartcity/react%20native%20app/services/alerts.js): Evaluates local alert rules.
 
-### Phase 2: Web Dashboard Development (`webapp/`)
-- [ ] Create dashboard application (Node.js/Express server or Vite + React/Vanilla JS).
-- [ ] Connect directly to Firebase Realtime Database using the client SDK with keys from [`API.txt`](file:///D:/smartcity/API.txt).
-- [ ] Build UI modules:
-  - **Live Stat Cards**: Ambient Temp, Relative Humidity, Air Quality PPM, Rain Status.
-  - **Security & Hazard Panel**: Motion alerts, IR obstacle triggers, gas threshold warnings.
-  - **Historical Telemetry Charts**: Temperature, Humidity, and Gas trends over time.
-  - **Map / Node Grid**: Multi-node status and connectivity indicators.
+---
 
-### Phase 3: Hardware Expansion & Multi-Sensor Gateway
-- [ ] Write driver scripts / sketches for the ADS1115 16-bit ADC to sample:
-  - Turbidity sensor, TDS sensor, pH sensor, Dissolved Oxygen (DO) probe.
-  - Wind speed anemometer and wind direction vane.
-- [ ] Implement Raspberry Pi 4 gateway service to aggregate advanced telemetry and push to Firebase/MQTT.
+## 7. Security & Environment Configuration
+
+* **Private Credentials Protected**:
+  * [`.gitignore`](file:///D:/smartcity/.gitignore) excludes `*firebase-adminsdk*.json`, `.env`, build artifacts, and `node_modules`.
+* **Config Files**:
+  * [`API firebase.txt`](file:///D:/smartcity/API%20firebase.txt): Contains public web client API key and database URL.
+  * [`API wheather and air quality.txt`](file:///D:/smartcity/API%20wheather%20and%20air%20quality.txt): Contains Weatherstack API key and TomTom Traffic URL template.
+
+---
+
+## 8. Future Development Roadmap
+
+### Phase 1: Hardware Expansion & Multi-Sensor Gateway
+- [ ] **Water Quality Bus Integration**:
+  * Connect analog sensors (Turbidity, TDS, pH, Dissolved Oxygen) to ADS1115 16-bit ADC over I2C.
+  * Implement digital temperature tracking via DS18B20 1-Wire waterproof probes.
+- [ ] **Industrial Wind Telemetry**:
+  * Interface RS485 wind speed anemometer and wind direction vane.
+- [ ] **Raspberry Pi 4 Gateway Service**:
+  * Deploy a Python/Node.js edge daemon on Raspberry Pi to ingest industrial bus sensors and sync to Firebase RTDB.
+
+### Phase 2: Predictive Machine Learning & Urban AI
+- [ ] **Microclimate & Heat Island Forecasting**:
+  * Train an LSTM/ARIMA model on historical Anand temperature and humidity trends to predict next-day heat index peaks.
+- [ ] **Traffic Bottleneck Prediction**:
+  * Build congestion forecasting models based on historical corridor speed dips during peak rush hours.
+- [ ] **Air Quality Dispersion Modeling**:
+  * Correlate wind velocity/direction with pollutant spikes to map localized industrial plume dispersion.
+
+### Phase 3: Push Notifications & Edge Automation
+- [ ] **Firebase Cloud Messaging (FCM)**:
+  * Trigger native mobile push notifications when MQ-2 gas levels breach critical thresholds ($>500\text{ PPM}$) or heavy rain starts.
+- [ ] **Smart Streetlight Automation Relay**:
+  * Add automated relay triggers based on PIR/IR motion detection and ambient twilight calculations.
+
+### Phase 4: Production Deployment & Containerization
+- [ ] **Dockerization**:
+  * Create `Dockerfile` and `docker-compose.yml` for Express backend, MQTT bridge, and Nginx reverse proxy.
+- [ ] **CI/CD Pipeline**:
+  * Setup GitHub Actions for automated linting, test suite execution, and Expo EAS mobile application builds.
+
+---
+
+## 9. Recent Changelog & Engineering Decisions
+
+### 9.1. Weather API Migration for Temperature & Humidity
+* **Change**: In [`webapp/public/index.html`](file:///D:/smartcity/webapp/public/index.html) and [`webapp/public/js/weather-dashboard.js`](file:///D:/smartcity/webapp/public/js/weather-dashboard.js), Ambient Temperature and Relative Humidity are now taken **strictly from the live Anand Weather API** ($28.2^\circ\text{C}$ and $68.0\%$).
+* **Rationale**: Decouples micro-localized hardware sensor fluctuations from the macro-urban weather telemetry, providing citizens and city operators with standardized Anand regional meteorological data.
+
+### 9.2. Real-Time Precipitation & Rain Telemetry
+* **Change**: Added a dedicated **Precipitation & Rain** telemetry card in Box 1:
+  * Rainfall precipitation volume in millimeters (`0.0 mm`).
+  * Rain probability percentage (`72%`).
+  * Dynamic status badge with contextual color styling (`0.0 mm (72% Rain Probability)`).
+  * Smooth animated gradient progress bar reflecting rain probability and precipitation intensity.
+* **Backend Ingestion**: [`webapp/smartcity-service.js`](file:///D:/smartcity/webapp/smartcity-service.js) fetches precipitation amounts, probability metrics, and rain condition flags directly from the live Anand weather provider.
+
+### 9.3. Unified Inline Unit Switcher (`°C` / `°F`)
+* **Change**: The temperature unit switcher button `[ Switch to °F ]` is positioned **directly beside the temperature value** in Box 1.
+* **Behavior**: When toggled, it dynamically converts the Weather API temperature ($28.2^\circ\text{C} \leftrightarrow 82.8^\circ\text{F}$) as well as all analytical metrics in Box 4 (Dew Point, Heat Index / RealFeel, Diurnal Min/Max range) synchronously, with immediate badge and label updates.
+
+### 9.4. Deep Microclimate Analysis Engine Alignment
+* **Change**: Updated [`weather-dashboard.js:computeAndRenderAnalysis()`](file:///D:/smartcity/webapp/public/js/weather-dashboard.js) to compute:
+  * **Dew Point**: Calculated via $T_{\text{dew}} = T - ((100 - \text{RH}) / 5)$.
+  * **Apparent Heat Index**: Calculated via vapor pressure approximation equation.
+  * **Thermal & Moisture Spectrum Positions**: Dynamically positioned needles on visual color gradient bars.
+  * **Evaporative Cooling Potential**: Human comfort score based on relative humidity.
+  * **Pollutant Distribution Chart**: Live Chart.js bar chart evaluating pollutants against NAAQS safety thresholds.
+
+### 9.5. Strict Preservation of IoT Hardware Command Center
+* **Change**: Kept [`webapp/public/iot-dashboard.html`](file:///D:/smartcity/webapp/public/iot-dashboard.html) completely intact as a dedicated hardware diagnostic operations center.
+* **Telemetry Maintained**: Direct Firebase listener for physical ESP8266/NodeMCU hardware sensors:
+  * DHT22 Ambient Temperature & Humidity
+  * MQ-2 Smoke and Combustible Gas Detection
+  * Power-gated Rain Collector (Corrosion-resistant digital detection)
+  * HW-201 Infrared Obstacle Telemetry
+  * HC-SR501 PIR Human Motion Detection
+
