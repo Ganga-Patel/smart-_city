@@ -112,3 +112,656 @@ code, .font-mono {
 .gauge-circle-fill {
   transition: stroke-dashoffset 0.8s ease-in-out;
 }
+
+/* ========================================================================= */
+/* MapLibre GL Dark Theme Overrides & Map Styling                            */
+/* ========================================================================= */
+.maplibregl-ctrl-group {
+  background-color: rgba(15, 23, 42, 0.9) !important;
+  border: 1px solid rgba(51, 65, 85, 0.8) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5) !important;
+  backdrop-filter: blur(8px) !important;
+  overflow: hidden;
+}
+
+.maplibregl-ctrl-group button {
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5) !important;
+  transition: background-color 0.2s ease;
+}
+
+.maplibregl-ctrl-group button:last-child {
+  border-bottom: none !important;
+}
+
+.maplibregl-ctrl-group button:hover {
+  background-color: rgba(56, 189, 248, 0.2) !important;
+}
+
+.maplibregl-ctrl-icon {
+  filter: invert(1) hue-rotate(180deg) brightness(1.2);
+}
+
+.maplibregl-ctrl-attrib {
+  background-color: rgba(3, 7, 18, 0.85) !important;
+  color: #64748b !important;
+  font-size: 10px !important;
+  padding: 2px 8px !important;
+  border-radius: 6px 0 0 0 !important;
+  border-top: 1px solid rgba(51, 65, 85, 0.5) !important;
+  border-left: 1px solid rgba(51, 65, 85, 0.5) !important;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: #38bdf8 !important;
+  text-decoration: none;
+}
+
+.maplibregl-ctrl-attrib a:hover {
+  text-decoration: underline;
+}
+
+/* Map Canvas Container & Dark Mode Filter for Keyless OpenStreetMap */
+#urbanMapCanvas {
+  background-color: #030712;
+}
+
+#urbanMapCanvas .maplibregl-canvas {
+  filter: invert(92%) hue-rotate(180deg) brightness(86%) contrast(110%);
+}
+
+/* Custom Marker Styling */
+.smartcity-map-marker {
+  cursor: pointer;
+  transform: translate(-50%, -50%);
+  transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.smartcity-map-marker:hover {
+  transform: translate(-50%, -50%) scale(1.08);
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6));
+}
+
+/* Fullscreen Mode Optimization */
+#urbanMapSection:fullscreen,
+#urbanMapSection:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  background-color: #030712 !important;
+  padding: 1.25rem !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 0 !important;
+  border: none !important;
+}
+
+#urbanMapSection:fullscreen #urbanMapBody,
+#urbanMapSection:-webkit-full-screen #urbanMapBody {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+#urbanMapSection:fullscreen #urbanMapBody > div:first-child,
+#urbanMapSection:-webkit-full-screen #urbanMapBody > div:first-child {
+  flex: 1;
+  height: 100% !important;
+  min-height: 0;
+}
+
+/* Custom MapLibre Popups - Glassmorphism Theme */
+.maplibregl-popup-content {
+  background: rgba(15, 23, 42, 0.95) !important;
+  backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(56, 189, 248, 0.25) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6) !important;
+  padding: 8px !important;
+  color: #f8fafc !important;
+}
+
+.maplibregl-popup-anchor-top .maplibregl-popup-tip {
+  border-bottom-color: rgba(15, 23, 42, 0.95) !important;
+}
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip {
+  border-top-color: rgba(15, 23, 42, 0.95) !important;
+}
+.maplibregl-popup-anchor-left .maplibregl-popup-tip {
+  border-right-color: rgba(15, 23, 42, 0.95) !important;
+}
+.maplibregl-popup-anchor-right .maplibregl-popup-tip {
+  border-left-color: rgba(15, 23, 42, 0.95) !important;
+}
+
+.maplibregl-popup-close-button {
+  color: #94a3b8 !important;
+  font-size: 16px !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+}
+
+.maplibregl-popup-close-button:hover {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Pulsing Search Location Pin */
+.smartcity-search-pin-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  cursor: pointer;
+}
+
+.search-pin-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  background: linear-gradient(135deg, #0284c7, #0ea5e9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.6);
+  border: 2px solid #ffffff;
+  z-index: 2;
+}
+
+.search-pin-icon svg {
+  transform: rotate(45deg);
+}
+
+.search-pin-pulse {
+  position: absolute;
+  bottom: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(14, 165, 233, 0.4);
+  animation: search-pin-pulse-anim 1.8s infinite ease-out;
+  z-index: 1;
+}
+
+@keyframes search-pin-pulse-anim {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+/* Unified Selected Location Marker (Zero Overlap with Anand Center) */
+.smartcity-selected-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 9px;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1.5px solid rgba(56, 189, 248, 0.6);
+  backdrop-filter: blur(14px);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.75), 0 0 16px rgba(14, 165, 233, 0.35);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  user-select: none;
+  min-width: 140px;
+  max-width: 290px;
+}
+
+.smartcity-selected-marker:hover {
+  transform: translateY(-2px) scale(1.04);
+  border-color: rgba(56, 189, 248, 0.95);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.85), 0 0 22px rgba(14, 165, 233, 0.55);
+}
+
+.smartcity-selected-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 6px;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  padding-bottom: 3px;
+}
+
+.smartcity-selected-telemetry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  width: 100%;
+  padding-top: 1px;
+}
+
+/* Weather Condition Map Badge */
+.smartcity-weather-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  backdrop-filter: blur(10px);
+  border-radius: 9999px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 12px rgba(56, 189, 248, 0.3);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  user-select: none;
+}
+
+.smartcity-weather-badge:hover {
+  transform: scale(1.08);
+  border-color: rgba(56, 189, 248, 0.85);
+  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.5);
+}
+
+.smartcity-weather-badge-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+}
+
+.smartcity-weather-badge-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.smartcity-weather-badge-rain {
+  font-size: 10px;
+  font-weight: 600;
+  color: #38bdf8;
+  background: rgba(14, 165, 233, 0.18);
+  border: 1px solid rgba(14, 165, 233, 0.35);
+  padding: 1px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* Temperature Annotation Map Badge */
+.smartcity-temp-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(10px);
+  border-radius: 9999px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  user-select: none;
+}
+
+.smartcity-temp-badge:hover {
+  transform: scale(1.08);
+}
+
+.smartcity-temp-badge-val {
+  font-size: 11px;
+  font-weight: 800;
+  font-family: ui-monospace, monospace;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.smartcity-temp-badge-status {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* Thermal Zone Color Themes */
+.temp-zone-cool {
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 12px rgba(56, 189, 248, 0.35);
+}
+.temp-zone-cool .smartcity-temp-badge-icon {
+  color: #38bdf8;
+}
+.temp-zone-cool .smartcity-temp-badge-status {
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.temp-zone-comfort {
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 12px rgba(16, 185, 129, 0.35);
+}
+.temp-zone-comfort .smartcity-temp-badge-icon {
+  color: #34d399;
+}
+.temp-zone-comfort .smartcity-temp-badge-status {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.temp-zone-warm {
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 12px rgba(245, 158, 11, 0.35);
+}
+.temp-zone-warm .smartcity-temp-badge-icon {
+  color: #fbbf24;
+}
+.temp-zone-warm .smartcity-temp-badge-status {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.temp-zone-hot {
+  border: 1px solid rgba(244, 63, 94, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 12px rgba(244, 63, 94, 0.35);
+}
+.temp-zone-hot .smartcity-temp-badge-icon {
+  color: #fb7185;
+}
+.temp-zone-hot .smartcity-temp-badge-status {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+
+/* Air Quality Map Badge */
+.smartcity-aqi-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(10px);
+  border-radius: 9999px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  user-select: none;
+}
+
+.smartcity-aqi-badge:hover {
+  transform: scale(1.08);
+}
+
+.smartcity-aqi-badge-score {
+  font-size: 11px;
+  font-weight: 800;
+  font-family: ui-monospace, monospace;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+.smartcity-aqi-badge-status {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* AQI Zone Themes */
+.aqi-zone-good {
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 12px rgba(16, 185, 129, 0.35);
+}
+.aqi-zone-good .smartcity-aqi-badge-icon {
+  color: #34d399;
+}
+.aqi-zone-good .smartcity-aqi-badge-status {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.aqi-zone-moderate {
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 12px rgba(245, 158, 11, 0.35);
+}
+.aqi-zone-moderate .smartcity-aqi-badge-icon {
+  color: #fbbf24;
+}
+.aqi-zone-moderate .smartcity-aqi-badge-status {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.aqi-zone-sensitive {
+  border: 1px solid rgba(249, 115, 22, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 12px rgba(249, 115, 22, 0.35);
+}
+.aqi-zone-sensitive .smartcity-aqi-badge-icon {
+  color: #fb923c;
+}
+.aqi-zone-sensitive .smartcity-aqi-badge-status {
+  background: rgba(249, 115, 22, 0.2);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.35);
+}
+
+.aqi-zone-unhealthy {
+  border: 1px solid rgba(244, 63, 94, 0.5);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6), 0 0 12px rgba(244, 63, 94, 0.35);
+}
+.aqi-zone-unhealthy .smartcity-aqi-badge-icon {
+  color: #fb7185;
+}
+.aqi-zone-unhealthy .smartcity-aqi-badge-status {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fb7185;
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+
+/* Unified Searched Location Marker */
+.smartcity-selected-marker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1.5px solid rgba(56, 189, 248, 0.6);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.7), 0 0 15px rgba(56, 189, 248, 0.35);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  user-select: none;
+  max-width: 270px;
+  pointer-events: auto;
+}
+
+.smartcity-selected-marker:hover {
+  transform: scale(1.05);
+  border-color: rgba(56, 189, 248, 0.95);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 22px rgba(56, 189, 248, 0.6);
+}
+
+.smartcity-selected-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.smartcity-selected-title {
+  max-width: 140px;
+}
+
+.smartcity-selected-telemetry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(51, 65, 85, 0.7);
+  flex-wrap: wrap;
+}
+
+/* ========================================================================= */
+/* TOP-LEFT CORNER MAP HUD STYLES                                            */
+/* ========================================================================= */
+#urbanMapTopLeftHUD {
+  background: rgba(10, 15, 29, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.75), 0 0 16px rgba(56, 189, 248, 0.2);
+  border-radius: 14px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#urbanMapTopLeftHUD.hud-is-minimized {
+  border-color: rgba(56, 189, 248, 0.5);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 12px rgba(56, 189, 248, 0.25);
+}
+
+#hudCollapsibleBody {
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, padding 0.25s ease;
+}
+
+#hudCollapsibleBody.hud-collapsed {
+  max-height: 0 !important;
+  opacity: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+#urbanMapTopLeftHUD label:hover {
+  border-color: rgba(56, 189, 248, 0.6);
+  background: rgba(30, 41, 59, 0.95);
+}
+
+/* Sleek Map Location Pin Beacon (Clean location indicator on canvas - zero text/badge clutter) */
+.smartcity-location-pin {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  user-select: none;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.pin-beacon-glow {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(14, 165, 233, 0.25);
+  box-shadow: 0 0 20px rgba(14, 165, 233, 0.6);
+  pointer-events: none;
+}
+
+.pin-beacon-pulse {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid rgba(56, 189, 248, 0.85);
+  animation: beacon-ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes beacon-ping {
+  75%, 100% {
+    transform: translate(-50%, -50%) scale(2.4);
+    opacity: 0;
+  }
+}
+
+.pin-beacon-core {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6), 0 0 12px rgba(14, 165, 233, 0.6);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+}
+
+.smartcity-location-pin:hover .pin-beacon-core {
+  transform: scale(1.15);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.8), 0 0 18px rgba(56, 189, 248, 0.9);
+}
+
+.pin-beacon-tag {
+  position: relative;
+  z-index: 2;
+  margin-top: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 0.94);
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  max-width: 170px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+
+/* Interactive Telemetry Cards inside Top-Left HUD */
+#hudWeatherCard,
+#hudTemperatureCard,
+#hudTrafficCard,
+#hudAirQualityCard {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#hudWeatherCard:hover {
+  border-color: rgba(56, 189, 248, 0.65) !important;
+  background: rgba(14, 165, 233, 0.12) !important;
+  transform: translateX(3px);
+}
+
+#hudTemperatureCard:hover {
+  border-color: rgba(244, 63, 94, 0.65) !important;
+  background: rgba(244, 63, 94, 0.12) !important;
+  transform: translateX(3px);
+}
+
+#hudTrafficCard:hover {
+  border-color: rgba(245, 158, 11, 0.65) !important;
+  background: rgba(245, 158, 11, 0.12) !important;
+  transform: translateX(3px);
+}
+
+#hudAirQualityCard:hover {
+  border-color: rgba(16, 185, 129, 0.65) !important;
+  background: rgba(16, 185, 129, 0.12) !important;
+  transform: translateX(3px);
+}
+

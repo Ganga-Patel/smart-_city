@@ -1,17 +1,11 @@
 /**
  * Weather & Air Quality Dashboard Controller - Enhanced Visual & Analytical Engine
- * 
- * Requirements:
- * - Box 1: Weather Conditions (Sensor Temp & Humidity + Weather API data for Anand)
- * - Box 2: Air Quality Index (Glowing radial gauge + particulate matter + trace gases)
- * - Box 3: In-Depth Environmental Telemetry Analysis:
- *   1. Dedicated Temperature Analysis (Heat index, thermal zone, daily range, spectrum bar)
- *   2. Dedicated Humidity Analysis (Dew point, evaporative cooling potential, condensation risk, spectrum bar)
- *   3. Pollutant Distribution Chart vs NAAQS standard limits (Chart.js)
- *   4. Urban Environmental Health Score (94/100) & Atmospheric Dispersion
- * - Unit Switcher: Directly beside the temperature value in Box 1; immediately updates all temperatures across Box 1 and Box 3!
- * - 10-Second Live Polling via Fetch API
  */
+
+import { SmartCityMapManager } from './map/map-manager.js';
+import { SmartCityMapState } from './map/map-state.js';
+import { SmartCityMapSearch } from './map/map-search.js';
+import { SmartCityMapLayers } from './map/map-layers.js';
 
 class WeatherAirDashboard {
   constructor() {
@@ -19,6 +13,12 @@ class WeatherAirDashboard {
     this.pollIntervalMs = 10000; // 10 seconds
     this.timerId = null;
     this.latestData = null;
+    this.mapManager = null;
+    this.mapState = new SmartCityMapState();
+    this.mapSearch = null;
+    this.mapLayers = null;
+    this.currentLocation = null;
+    this.STORAGE_KEY_LOCATION = 'smartcity_active_location';
     
     // Cached raw API metric values in Celsius for dynamic unit conversion
     // Temperature and humidity are taken strictly from Weather API (not from sensor)
@@ -32,13 +32,320 @@ class WeatherAirDashboard {
     this.pollutantChart = null;
   }
 
-  init() {
-    console.log('🌤️ Initializing Enhanced Visual Dashboard (Anand, Gujarat, India)...');
+  async init() {
+    console.log('🌤️ Initializing Global Responsive Telemetry Dashboard...');
+    window.weatherAirApp = this;
     this.bindUnitToggle();
     this.bindRefreshBtn();
+    this.bindNearestLocationBtn();
     this.initPollutantChart();
-    this.fetchData(true);
+    this.initMap();
+
+    // Check for saved location or automatically detect nearest location
+    const saved = this.loadSavedLocation();
+    if (saved) {
+      await this.selectLocation(saved);
+    } else {
+      this.detectAndApplyNearestLocation();
+    }
+
     this.startPolling();
+  }
+
+  initMap() {
+    try {
+      this.mapManager = new SmartCityMapManager();
+      this.mapManager.initMap('urbanMapCanvas');
+
+      // 1. Center on Active Location button handler
+      const resetBtn = document.getElementById('mapResetBtn');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          if (this.currentLocation && this.mapManager) {
+            this.mapManager.flyTo(this.currentLocation.lon, this.currentLocation.lat, 13.5);
+          } else if (this.mapManager) {
+            this.mapManager.resetToAnand();
+          }
+        });
+      }
+
+      // 2. Fullscreen toggle handler
+      const fullscreenBtn = document.getElementById('mapFullscreenBtn');
+      if (fullscreenBtn) {
+        fullscreenBtn.addEventListener('click', () => {
+          if (this.mapManager) {
+            const section = document.getElementById('urbanMapSection');
+            this.mapManager.toggleFullscreen(section);
+          }
+        });
+
+        document.addEventListener('fullscreenchange', () => {
+          const isFs = Boolean(document.fullscreenElement);
+          const icon = document.getElementById('mapFullscreenIcon');
+          const text = document.getElementById('mapFullscreenText');
+          if (icon) {
+            icon.setAttribute('data-lucide', isFs ? 'minimize' : 'maximize');
+          }
+          if (text) {
+            text.textContent = isFs ? 'Exit Fullscreen' : 'Fullscreen';
+          }
+          if (window.lucide) window.lucide.createIcons();
+          setTimeout(() => this.mapManager.resize(), 100);
+        });
+      }
+
+      // 3. Collapsible Hide / Show Map toggle handler
+      const toggleVisBtn = document.getElementById('mapToggleVisibilityBtn');
+      const mapBody = document.getElementById('urbanMapBody');
+      const statusPill = document.getElementById('mapStatusPill');
+      const statusText = document.getElementById('mapStatusText');
+
+      const applyMapVisibility = (visible) => {
+        if (!mapBody || !toggleVisBtn) return;
+        const icon = document.getElementById('mapToggleVisibilityIcon');
+        const text = document.getElementById('mapToggleVisibilityText');
+
+        if (visible) {
+          mapBody.classList.remove('hidden');
+          if (text) text.textContent = 'Hide Map';
+          if (icon) icon.setAttribute('data-lucide', 'chevron-up');
+          if (statusText) statusText.textContent = 'Map Canvas Active';
+          if (statusPill) {
+            statusPill.className = 'px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1';
+          }
+          setTimeout(() => this.mapManager.resize(), 50);
+        } else {
+          mapBody.classList.add('hidden');
+          if (text) text.textContent = 'Show Map';
+          if (icon) icon.setAttribute('data-lucide', 'chevron-down');
+          if (statusText) statusText.textContent = 'Map Hidden';
+          if (statusPill) {
+            statusPill.className = 'px-2 py-0.5 text-[10px] font-semibold bg-slate-500/10 text-slate-400 border border-slate-700/50 rounded-full flex items-center gap-1';
+          }
+        }
+        if (window.lucide) window.lucide.createIcons();
+      };
+
+      if (toggleVisBtn) {
+        toggleVisBtn.addEventListener('click', () => {
+          const nextState = !this.mapState.isMapVisible;
+          this.mapState.setMapVisible(nextState);
+          applyMapVisibility(nextState);
+        });
+      }
+
+      // Apply initial persisted visibility
+      applyMapVisibility(this.mapState.isMapVisible);
+
+      // 4. Layer Checkboxes Binding & Persistence
+      const layers = [
+        { id: 'layerToggleWeather', key: 'weather' },
+        { id: 'layerToggleTemperature', key: 'temperature' },
+        { id: 'layerToggleTraffic', key: 'traffic' },
+        { id: 'layerToggleAirQuality', key: 'airQuality' }
+      ];
+
+      layers.forEach(({ id, key }) => {
+        const el = document.getElementById(id);
+        if (el) {
+          // Restore initial state from localStorage
+          el.checked = this.mapState.isLayerActive(key);
+          el.addEventListener('change', () => {
+            this.mapState.setLayerActive(key, el.checked);
+          });
+        }
+      });
+
+      // 5. Initialize Spatial Telemetry Layers (Phase 4-7 + Option A dynamic overlays)
+      this.mapLayers = new SmartCityMapLayers(this.mapManager, this.mapState);
+
+      // 6. Initialize Location Search Engine connected with mapLayers (Option A)
+      this.mapSearch = new SmartCityMapSearch(this.mapManager, this.mapState, this.mapLayers);
+
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+
+    } catch (err) {
+      console.error('[Dashboard] Error initializing map manager:', err);
+    }
+  }
+
+  bindNearestLocationBtn() {
+    const btn = document.getElementById('useNearestLocationBtn');
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.detectAndApplyNearestLocation(true);
+      });
+    }
+  }
+
+  detectAndApplyNearestLocation(isManual = false) {
+    const activeBadge = document.getElementById('activeLocationBadgeName');
+    if (activeBadge) activeBadge.textContent = 'Locating GPS...';
+
+    const headerBadge = document.getElementById('headerLocationName');
+    if (headerBadge) headerBadge.textContent = 'Locating Nearest Station...';
+
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lon = pos.coords.longitude;
+          try {
+            const res = await fetch(`/api/location/reverse?lat=${lat}&lon=${lon}`);
+            const rev = await res.json();
+            const name = rev.name || 'My Location';
+            const loc = {
+              name,
+              display_name: rev.display_name || `${name} (${lat.toFixed(2)}°, ${lon.toFixed(2)}°)`,
+              lat,
+              lon
+            };
+            this.selectLocation(loc);
+          } catch {
+            this.selectLocation({
+              name: 'Nearest Location',
+              display_name: `${lat.toFixed(3)}° N, ${lon.toFixed(3)}° E`,
+              lat,
+              lon
+            });
+          }
+        },
+        (err) => {
+          console.warn('Geolocation unavailable, falling back:', err.message);
+          if (!this.currentLocation) {
+            this.fallbackToDefaultLocation();
+          }
+        },
+        { timeout: 8000, enableHighAccuracy: false, maximumAge: 300000 }
+      );
+    } else {
+      this.fallbackToDefaultLocation();
+    }
+  }
+
+  fallbackToDefaultLocation() {
+    const defaultLoc = {
+      name: 'Anand',
+      display_name: 'Anand, Gujarat, India',
+      lat: 22.5645,
+      lon: 72.9289
+    };
+    this.selectLocation(defaultLoc);
+  }
+
+  loadSavedLocation() {
+    try {
+      const raw = localStorage.getItem(this.STORAGE_KEY_LOCATION);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  saveLocation(loc) {
+    try {
+      localStorage.setItem(this.STORAGE_KEY_LOCATION, JSON.stringify(loc));
+    } catch {}
+  }
+
+  async selectLocation(loc) {
+    if (!loc || typeof loc.lat !== 'number' || typeof loc.lon !== 'number') return;
+    this.currentLocation = loc;
+    this.saveLocation(loc);
+
+    this.updateLocationLabels(loc);
+
+    const searchInput = document.getElementById('mapSearchInput');
+    if (searchInput) searchInput.value = loc.name;
+
+    if (this.mapManager) {
+      this.mapManager.flyTo(loc.lon, loc.lat, 13.5);
+      this.mapManager.clearSearchMarker();
+    }
+
+    if (this.mapLayers) {
+      this.mapLayers.setSearchedLocation(loc, null);
+    }
+
+    await this.fetchData(true);
+  }
+
+  updateLocationLabels(loc) {
+    if (!loc) return;
+
+    // Header badge
+    const headerLoc = document.getElementById('headerLocationName');
+    if (headerLoc) {
+      headerLoc.textContent = loc.display_name || loc.name;
+      headerLoc.title = loc.display_name || loc.name;
+    }
+
+    // Active pill in search bar
+    const activePill = document.getElementById('activeLocationBadgeName');
+    if (activePill) {
+      activePill.textContent = loc.name;
+      activePill.title = loc.display_name || loc.name;
+    }
+
+    // Page title
+    const pageTitle = document.getElementById('pageTitle');
+    if (pageTitle) {
+      pageTitle.textContent = `${loc.name} - Smart City Weather & Atmospheric Telemetry`;
+    }
+
+    // Box 1 Weather
+    const weatherSub = document.getElementById('weatherLocationSubtitle');
+    if (weatherSub) weatherSub.textContent = loc.display_name || `${loc.name}, Telemetry Station`;
+
+    const weatherTag = document.getElementById('weatherLocationTag');
+    if (weatherTag) weatherTag.textContent = `Weather API • ${loc.name}`;
+
+    const weatherLive = document.getElementById('weatherLiveTag');
+    if (weatherLive) weatherLive.textContent = `${loc.name} Live`;
+
+    // Box 2A Ephemeris
+    const ephemSub = document.getElementById('ephemerisLocationSubtitle');
+    if (ephemSub) ephemSub.textContent = `${loc.name} • Celestial Cycles`;
+
+    // Box 2B Air Quality
+    const airSub = document.getElementById('airLocationSubtitle');
+    if (airSub) airSub.textContent = `${loc.name} • EPA Scale`;
+
+    // Box 3 Traffic
+    const trafficSub = document.getElementById('trafficLocationSubtitle');
+    if (trafficSub) trafficSub.textContent = `${loc.name} Mobility & Arterial Flow`;
+
+    const corridorsTitle = document.getElementById('trafficCorridorsTitle');
+    if (corridorsTitle) {
+      corridorsTitle.innerHTML = `
+        <i data-lucide="map-pin" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span>Active ${escapeHtml(loc.name)} Transit Corridors</span>
+      `;
+    }
+
+    // Map Subtitle & Center Coordinates
+    const mapSub = document.getElementById('mapLocationSubtitle');
+    if (mapSub) mapSub.textContent = `Spatial Telemetry Canvas • ${loc.name}`;
+
+    const mapCoord = document.getElementById('mapCenterCoordText');
+    if (mapCoord && typeof loc.lat === 'number' && typeof loc.lon === 'number') {
+      mapCoord.textContent = `Center: ${loc.lat.toFixed(4)}° N, ${loc.lon.toFixed(4)}° E (${loc.name})`;
+    }
+
+    // Analysis
+    const analysisSub = document.getElementById('analysisLocationSubtitle');
+    if (analysisSub) analysisSub.textContent = `In-Depth Weather Telemetry • Urban Climate Insights • ${loc.name}`;
+
+    const stationLoc = document.getElementById('analysisStationLocation');
+    if (stationLoc) stationLoc.textContent = loc.display_name || `${loc.name} Telemetry Node`;
+
+    const footerLoc = document.getElementById('footerLocationName');
+    if (footerLoc) footerLoc.textContent = `Smart City Telemetry Platform • Active Node: ${loc.name}`;
+
+    if (window.lucide) window.lucide.createIcons();
   }
 
   bindUnitToggle() {
@@ -47,6 +354,12 @@ class WeatherAirDashboard {
       toggleBtn.addEventListener('click', () => {
         this.isFahrenheit = !this.isFahrenheit;
         this.updateAllTemperatureDisplays();
+        if (this.mapLayers && this.latestData) {
+          this.mapLayers.updateAll(this.latestData, this.isFahrenheit, this.getAnalysisSnapshot());
+        }
+        if (this.mapManager) {
+          this.mapManager.updateSearchMarkerUnit(this.isFahrenheit);
+        }
       });
     }
   }
@@ -70,23 +383,52 @@ class WeatherAirDashboard {
     if (refreshIcon && isManual) refreshIcon.classList.add('animate-spin');
 
     try {
-      const res = await fetch('/api/dashboard-data', { cache: 'no-store' });
+      let url = '/api/dashboard-data';
+      if (this.currentLocation && typeof this.currentLocation.lat === 'number' && typeof this.currentLocation.lon === 'number') {
+        url = `/api/location/weather?lat=${this.currentLocation.lat}&lon=${this.currentLocation.lon}&name=${encodeURIComponent(this.currentLocation.name || '')}`;
+      }
+
+      const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
-      const data = await res.json();
-      if (!data.success) throw new Error(data.error || 'Failed to fetch data');
+      const raw = await res.json();
+      let unifiedData;
+      if (raw.weather) {
+        unifiedData = {
+          success: true,
+          cityWeather: raw.weather,
+          airQuality: raw.airQuality,
+          traffic: raw.traffic,
+          astronomy: raw.astronomy,
+          location: this.currentLocation
+        };
+      } else {
+        unifiedData = raw;
+      }
 
-      this.latestData = data;
-      this.renderDashboard(data);
+      this.latestData = unifiedData;
+      this.renderDashboard(unifiedData);
+
+      if (this.currentLocation) {
+        this.updateLocationLabels(this.currentLocation);
+        if (this.mapLayers) {
+          this.mapLayers.setSearchedLocation(this.currentLocation, raw);
+        }
+      }
+
       this.updateSyncTime();
     } catch (err) {
       console.error('Fetch error:', err);
+      if (this.mapLayers && this.currentLocation) {
+        this.mapLayers.setSearchedLocationError(this.currentLocation, 'Live telemetry temporarily unavailable.');
+      }
     } finally {
       if (refreshIcon) refreshIcon.classList.remove('animate-spin');
     }
   }
 
   renderDashboard(data) {
+    this.latestData = data;
     const weather = data.cityWeather || {};
     const air = data.airQuality || {};
 
@@ -95,6 +437,17 @@ class WeatherAirDashboard {
     // =========================================================================
     if (typeof weather.temperature === 'number') {
       this.rawApiTempC = weather.temperature;
+    }
+    if (typeof weather.feelsLike === 'number') {
+      this.rawHeatIndexC = weather.feelsLike;
+    } else if (typeof weather.heatIndex === 'number') {
+      this.rawHeatIndexC = weather.heatIndex;
+    }
+    if (typeof weather.minTemp === 'number') {
+      this.rawMinTempC = weather.minTemp;
+    }
+    if (typeof weather.maxTemp === 'number') {
+      this.rawMaxTempC = weather.maxTemp;
     }
 
     const humid = typeof weather.humidity === 'number' ? weather.humidity : 68.0;
@@ -211,6 +564,11 @@ class WeatherAirDashboard {
     if (so2El) so2El.textContent = `${air.so2 ?? 9.6} µg/m³`;
 
     // =========================================================================
+    // BOX 2A: SOLAR & LUNAR EPHEMERIS (SUNRISE, SUNSET, MOON CYCLE & MOONRISE)
+    // =========================================================================
+    this.renderEphemerisBox(data.astronomy, weather);
+
+    // =========================================================================
     // BOX 3: URBAN TRAFFIC & MOBILITY (TOMTOM API / ANAND TRAFFIC)
     // =========================================================================
     const traffic = data.traffic || {};
@@ -222,8 +580,139 @@ class WeatherAirDashboard {
     this.computeAndRenderAnalysis(weather, air, traffic);
     this.updatePollutantChart(air);
 
+    // =========================================================================
+    // PHASE 8: SYNCHRONIZE SPATIAL TELEMETRY ON URBAN MAP (SINGLE 10s POLL HOOK)
+    // =========================================================================
+    if (this.mapLayers) {
+      this.mapLayers.updateAll(data, this.isFahrenheit, this.getAnalysisSnapshot());
+    }
+
     // Refresh icons
     if (window.lucide) window.lucide.createIcons();
+  }
+
+  /**
+   * Render Solar & Lunar Ephemeris Box
+   * Displays Sunrise, Sunset, Solar Noon, Daylight Duration/Progress,
+   * Lunar Cycle Day (0-29.5), Moon Phase, Illumination %, Moonrise & Moonset
+   */
+  renderEphemerisBox(astronomy, weather) {
+    const astro = astronomy || this.computeClientEphemeris(new Date());
+
+    const sunriseEl = document.getElementById('ephemerisSunrise');
+    if (sunriseEl && astro.sunrise) sunriseEl.textContent = astro.sunrise;
+
+    const sunsetEl = document.getElementById('ephemerisSunset');
+    if (sunsetEl && astro.sunset) sunsetEl.textContent = astro.sunset;
+
+    const solarNoonEl = document.getElementById('ephemerisSolarNoon');
+    if (solarNoonEl && astro.solarNoon) solarNoonEl.textContent = `Solar Noon: ${astro.solarNoon}`;
+
+    const daylightDurEl = document.getElementById('ephemerisDaylightDuration');
+    if (daylightDurEl && astro.daylightDuration) daylightDurEl.textContent = astro.daylightDuration;
+
+    const daylightStatusEl = document.getElementById('ephemerisDaylightStatus');
+    if (daylightStatusEl) {
+      const pct = astro.daylightPercent ?? 54;
+      daylightStatusEl.textContent = `${pct}% Daylight elapsed`;
+    }
+
+    const daylightBar = document.getElementById('ephemerisDaylightBar');
+    if (daylightBar) {
+      const pct = Math.max(0, Math.min(100, astro.daylightPercent ?? 54));
+      daylightBar.style.width = `${pct}%`;
+    }
+
+    // Lunar Metrics
+    const lunar = astro.lunar || {};
+    const moonIconEl = document.getElementById('ephemerisMoonIcon');
+    if (moonIconEl && lunar.phaseIcon) moonIconEl.textContent = lunar.phaseIcon;
+
+    const moonPhaseEl = document.getElementById('ephemerisMoonPhase');
+    if (moonPhaseEl && lunar.phaseName) moonPhaseEl.textContent = lunar.phaseName;
+
+    const moonCycleDayEl = document.getElementById('ephemerisMoonCycleDay');
+    if (moonCycleDayEl && typeof lunar.cycleDay !== 'undefined') {
+      moonCycleDayEl.textContent = `Day ${lunar.cycleDay} of 29.5`;
+    }
+
+    const moonIllumEl = document.getElementById('ephemerisMoonIllumination');
+    if (moonIllumEl && typeof lunar.illumination !== 'undefined') {
+      moonIllumEl.textContent = `${lunar.illumination}% Illuminated Face`;
+    }
+
+    const synodicProgEl = document.getElementById('ephemerisSynodicProgress');
+    if (synodicProgEl && lunar.phaseIndex) {
+      synodicProgEl.textContent = `Phase ${lunar.phaseIndex} / 8`;
+    }
+
+    const moonriseEl = document.getElementById('ephemerisMoonrise');
+    if (moonriseEl && lunar.moonrise) moonriseEl.textContent = lunar.moonrise;
+
+    const moonsetEl = document.getElementById('ephemerisMoonset');
+    if (moonsetEl && lunar.moonset) moonsetEl.textContent = lunar.moonset;
+
+    const moonBar = document.getElementById('ephemerisMoonCycleBar');
+    if (moonBar) {
+      const cyclePct = Math.max(1, Math.min(100, lunar.cyclePercent ?? Math.round(((lunar.cycleDay || 1) / 29.5) * 100)));
+      moonBar.style.width = `${cyclePct}%`;
+    }
+  }
+
+  computeClientEphemeris(date = new Date()) {
+    const refNewMoon = new Date(Date.UTC(2024, 0, 11, 11, 57, 0));
+    const synodicMonth = 29.53058867;
+    const diffDays = (date.getTime() - refNewMoon.getTime()) / (1000 * 60 * 60 * 24);
+    const cycleDays = ((diffDays % synodicMonth) + synodicMonth) % synodicMonth;
+    const phaseFraction = cycleDays / synodicMonth;
+    const illumination = Math.round((1 - Math.cos(phaseFraction * 2 * Math.PI)) / 2 * 100);
+
+    let phaseName = 'New Moon';
+    let phaseIcon = '🌑';
+    let phaseIndex = 1;
+
+    if (cycleDays < 1.845) { phaseName = 'New Moon'; phaseIcon = '🌑'; phaseIndex = 1; }
+    else if (cycleDays < 7.382) { phaseName = 'Waxing Crescent'; phaseIcon = '🌒'; phaseIndex = 2; }
+    else if (cycleDays < 9.228) { phaseName = 'First Quarter'; phaseIcon = '🌓'; phaseIndex = 3; }
+    else if (cycleDays < 14.765) { phaseName = 'Waxing Gibbous'; phaseIcon = '🌔'; phaseIndex = 4; }
+    else if (cycleDays < 16.610) { phaseName = 'Full Moon'; phaseIcon = '🌕'; phaseIndex = 5; }
+    else if (cycleDays < 22.147) { phaseName = 'Waning Gibbous'; phaseIcon = '🌖'; phaseIndex = 6; }
+    else if (cycleDays < 23.993) { phaseName = 'Last Quarter'; phaseIcon = '🌗'; phaseIndex = 7; }
+    else { phaseName = 'Waning Crescent'; phaseIcon = '🌘'; phaseIndex = 8; }
+
+    const baseMoonriseHour = 6.4;
+    const moonriseFloat = (baseMoonriseHour + (cycleDays * 0.813)) % 24;
+    const mrH = Math.floor(moonriseFloat);
+    const mrM = Math.floor((moonriseFloat - mrH) * 60);
+
+    const moonsetFloat = (moonriseFloat + 12.4) % 24;
+    const msH = Math.floor(moonsetFloat);
+    const msM = Math.floor((moonsetFloat - msH) * 60);
+
+    const format12h = (h, m) => {
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 === 0 ? 12 : h % 12;
+      return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+    };
+
+    return {
+      sunrise: '06:24 AM',
+      sunset: '06:44 PM',
+      solarNoon: '12:34 PM',
+      daylightDuration: '12h 20m',
+      daylightPercent: 54,
+      lunar: {
+        cycleDay: Math.round(cycleDays * 10) / 10,
+        totalCycleDays: 29.5,
+        cyclePercent: Math.max(1, Math.round((cycleDays / synodicMonth) * 100)),
+        illumination,
+        phaseName,
+        phaseIcon,
+        phaseIndex,
+        moonrise: format12h(mrH, mrM),
+        moonset: format12h(msH, msM)
+      }
+    };
   }
 
   /**
@@ -366,25 +855,174 @@ class WeatherAirDashboard {
     // 7. Update All Temperature Displays (Box 1 + Box 3)
     this.updateAllTemperatureDisplays();
 
-    // 8. Airflow Dispersion Evaluation
-    const dispersionEl = document.getElementById('analysisDispersion');
-    if (dispersionEl) {
-      if (windSpeed >= 12) {
-        dispersionEl.textContent = `Active Dispersion: Steady ${windSpeed} km/h westerly airflow effectively ventilates Anand, mitigating ground-level pollutant accumulation.`;
-      } else {
-        dispersionEl.textContent = `Mild Dispersion: Light ${windSpeed} km/h airflow promotes localized thermal stability over Anand plains.`;
-      }
+    // 8. Urban Environmental Score + Visual Metrics (computed from live telemetry)
+    this.renderUrbanScorecard(aqi, windSpeed, pressure);
+  }
+
+  /**
+   * Renders the Urban Environmental Scorecard visually:
+   * - SVG ring + progress bar for composite score
+   * - AQI, Wind, Barometer metric bars
+   * - Grade badge, label, recommendation text
+   * All values are live and change with searched location.
+   */
+  renderUrbanScorecard(aqi, windSpeed, pressure) {
+    // ── Compute sub-scores (0–100, higher = better) ──────────────────────────
+    // AQI sub-score: 0 = worst (300 AQI), 100 = best (0 AQI)
+    const aqiCapped = Math.max(0, Math.min(300, aqi || 50));
+    const aqiSubScore = Math.round(Math.max(0, 100 - (aqiCapped / 3)));
+
+    // Wind sub-score: optimal 8–25 km/h gets highest points
+    const wsp = windSpeed || 10;
+    let windSubScore;
+    if (wsp >= 8 && wsp <= 25) windSubScore = 100;
+    else if (wsp < 8) windSubScore = Math.round(40 + (wsp / 8) * 60);
+    else windSubScore = Math.round(Math.max(30, 100 - ((wsp - 25) * 2)));
+
+    // Baro sub-score: 1013 hPa = peak stability, degrade ±30 hPa
+    const baroBase = 1013;
+    const baroDelta = Math.abs((pressure || 1013) - baroBase);
+    const baroSubScore = Math.round(Math.max(20, 100 - (baroDelta * 2.5)));
+
+    // Composite score (weighted: AQI 50%, Wind 25%, Baro 25%)
+    const score = Math.round((aqiSubScore * 0.50) + (windSubScore * 0.25) + (baroSubScore * 0.25));
+
+    // ── Grade & labels ────────────────────────────────────────────────────────
+    let grade, gradeCls, label, labelCls, outdoor, outdoor_cls, resp, resp_cls;
+    if (score >= 85) {
+      grade = 'Optimal Grade A'; gradeCls = 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+      label = 'Excellent Habitability'; labelCls = 'text-emerald-400';
+      outdoor = 'Recommended'; outdoor_cls = 'text-emerald-400';
+      resp = 'Minimal'; resp_cls = 'text-emerald-400';
+    } else if (score >= 70) {
+      grade = 'Good Grade B'; gradeCls = 'text-sky-400 bg-sky-500/10 border-sky-500/20';
+      label = 'Good Urban Comfort'; labelCls = 'text-sky-400';
+      outdoor = 'Generally Safe'; outdoor_cls = 'text-sky-400';
+      resp = 'Low'; resp_cls = 'text-sky-400';
+    } else if (score >= 50) {
+      grade = 'Moderate Grade C'; gradeCls = 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+      label = 'Moderate Conditions'; labelCls = 'text-amber-400';
+      outdoor = 'Moderate Caution'; outdoor_cls = 'text-amber-400';
+      resp = 'Moderate'; resp_cls = 'text-amber-400';
+    } else {
+      grade = 'Poor Grade D'; gradeCls = 'text-rose-400 bg-rose-500/10 border-rose-500/20';
+      label = 'Poor Air & Stability'; labelCls = 'text-rose-400';
+      outdoor = 'Not Recommended'; outdoor_cls = 'text-rose-400';
+      resp = 'High – Use Mask'; resp_cls = 'text-rose-400';
     }
 
-    // 9. Barometric Status
-    const baroEl = document.getElementById('analysisBaroStatus');
-    if (baroEl) {
-      if (pressure >= 1010) {
-        baroEl.textContent = `Stable Barometric Ridge (${pressure} hPa): Indicates steady weather conditions with low probability of storm formation.`;
-      } else {
-        baroEl.textContent = `Atmospheric Depression (${pressure} hPa): Indicates potential cloud clustering and regional precipitation dynamics.`;
-      }
+    // AQI chip colour
+    let aqiChip, aqiChipCls;
+    if (aqiCapped <= 50) {
+      aqiChip = 'Good'; aqiChipCls = 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+    } else if (aqiCapped <= 100) {
+      aqiChip = 'Moderate'; aqiChipCls = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+    } else if (aqiCapped <= 150) {
+      aqiChip = 'Sensitive'; aqiChipCls = 'bg-orange-500/10 text-orange-400 border-orange-500/20';
+    } else {
+      aqiChip = 'Unhealthy'; aqiChipCls = 'bg-rose-500/10 text-rose-400 border-rose-500/20';
     }
+
+    // Wind chip
+    let windChip, windChipCls;
+    if (windSubScore >= 85) {
+      windChip = 'Active'; windChipCls = 'bg-teal-500/10 text-teal-400 border-teal-500/20';
+    } else if (windSubScore >= 55) {
+      windChip = 'Mild'; windChipCls = 'bg-sky-500/10 text-sky-400 border-sky-500/20';
+    } else {
+      windChip = 'Calm'; windChipCls = 'bg-slate-500/10 text-slate-400 border-slate-500/20';
+    }
+
+    // Baro chip
+    let baroChip, baroChipCls;
+    if (baroSubScore >= 80) {
+      baroChip = 'Stable'; baroChipCls = 'bg-sky-500/10 text-sky-400 border-sky-500/20';
+    } else if (baroSubScore >= 55) {
+      baroChip = 'Variable'; baroChipCls = 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+    } else {
+      baroChip = 'Unstable'; baroChipCls = 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+    }
+
+    // ── SVG Ring: stroke-dashoffset = circumference * (1 - score/100) ────────
+    const circumference = 201.06;
+    const ringOffset = circumference * (1 - score / 100);
+
+    // ── DOM Updates ───────────────────────────────────────────────────────────
+    const setEl = (id, prop, val) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (prop === 'text') el.textContent = val;
+      else if (prop === 'html') el.innerHTML = val;
+      else el[prop] = val;
+    };
+    const setClass = (id, cls) => {
+      const el = document.getElementById(id);
+      if (el) el.className = `text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cls}`;
+    };
+
+    // Score ring & bar
+    const ring = document.getElementById('urbanScoreRing');
+    if (ring) ring.style.strokeDashoffset = ringOffset.toFixed(2);
+    setEl('urbanScoreValue', 'text', String(score));
+    setEl('urbanScoreBar', 'style', `width:${score}%`);
+
+    // Grade badge
+    const badge = document.getElementById('urbanScoreGradeBadge');
+    if (badge) {
+      badge.textContent = grade;
+      badge.className = `text-[10px] font-mono px-2 py-0.5 rounded border ${gradeCls}`;
+    }
+
+    // Label
+    const lbl = document.getElementById('urbanScoreLabel');
+    if (lbl) { lbl.textContent = label; lbl.className = `text-sm font-bold mb-1 ${labelCls}`; }
+
+    const sub = document.getElementById('urbanScoreSubtext');
+    if (sub) sub.textContent = `AQI ${aqiCapped} · Wind ${wsp} km/h · ${pressure || 1013} hPa`;
+
+    // AQI row
+    setEl('urbanAqiVal', 'text', String(aqiCapped));
+    const aqiBarPct = Math.min(100, Math.round((aqiCapped / 300) * 100));
+    setEl('urbanAqiBar', 'style', `width:${aqiBarPct}%`);
+    // AQI bar colour
+    const aqiBarEl = document.getElementById('urbanAqiBar');
+    if (aqiBarEl) {
+      if (aqiCapped <= 50) aqiBarEl.className = 'h-full rounded-full transition-all duration-700 bg-gradient-to-r from-emerald-400 to-teal-400';
+      else if (aqiCapped <= 100) aqiBarEl.className = 'h-full rounded-full transition-all duration-700 bg-gradient-to-r from-amber-400 to-yellow-400';
+      else aqiBarEl.className = 'h-full rounded-full transition-all duration-700 bg-gradient-to-r from-rose-400 to-red-500';
+    }
+    const aqiChipEl = document.getElementById('urbanAqiChip');
+    if (aqiChipEl) { aqiChipEl.textContent = aqiChip; aqiChipEl.className = `text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${aqiChipCls}`; }
+
+    // Wind row
+    const windBarPct = Math.min(100, Math.round((wsp / 60) * 100));
+    setEl('urbanWindVal', 'text', `${wsp} km/h`);
+    setEl('urbanWindBar', 'style', `width:${windBarPct}%`);
+    const windChipEl = document.getElementById('urbanWindChip');
+    if (windChipEl) { windChipEl.textContent = windChip; windChipEl.className = `text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${windChipCls}`; }
+
+    // Baro row
+    const p = pressure || 1013;
+    const baroBarPct = Math.min(100, Math.round(Math.max(0, (p - 970) / 60) * 100));
+    setEl('urbanBaroVal', 'text', `${p} hPa`);
+    setEl('urbanBaroBar', 'style', `width:${baroBarPct}%`);
+    const baroChipEl = document.getElementById('urbanBaroChip');
+    if (baroChipEl) { baroChipEl.textContent = baroChip; baroChipEl.className = `text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${baroChipCls}`; }
+
+    // Footer recommendations
+    const outdoorEl = document.getElementById('urbanOutdoorRec');
+    if (outdoorEl) { outdoorEl.textContent = outdoor; outdoorEl.className = outdoor_cls; }
+    const respEl = document.getElementById('urbanRespRisk');
+    if (respEl) { respEl.textContent = resp; respEl.className = resp_cls; }
+  }
+
+  getAnalysisSnapshot() {
+    return {
+      dewPointC: this.rawDewPointC,
+      heatIndexC: this.rawHeatIndexC,
+      minTempC: this.rawMinTempC,
+      maxTempC: this.rawMaxTempC
+    };
   }
 
   /**
@@ -403,6 +1041,8 @@ class WeatherAirDashboard {
       // Box 1 Temperature (Weather API)
       this.setText('weatherTempVal', fTemp.toFixed(1));
       this.setText('weatherTempUnit', '°F');
+      this.setText('weatherFeelsLikeVal', `${fHeatIndex.toFixed(1)} °F`);
+      this.setText('weatherMinMaxVal', `${fMin.toFixed(0)}° – ${fMax.toFixed(0)}°F`);
 
       // Box 3: Temperature Deep Analysis Fields
       this.setText('analysisTempReading', `${fTemp.toFixed(1)} °F`);
@@ -413,12 +1053,14 @@ class WeatherAirDashboard {
       if (toggleBtn) {
         toggleBtn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-sky-400"></i><span>Switch to °C</span>`;
         toggleBtn.title = 'Click to switch back to Celsius (°C)';
-        toggleBtn.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/30 transition cursor-pointer flex items-center gap-1.5 shadow-sm';
+        toggleBtn.className = 'px-2.5 py-1 text-xs font-semibold rounded-lg bg-sky-500/20 text-sky-300 border border-sky-500/40 hover:bg-sky-500/30 transition cursor-pointer flex items-center gap-1.5 shadow-sm';
       }
     } else {
       // Box 1 Temperature (Weather API)
       this.setText('weatherTempVal', this.rawApiTempC.toFixed(1));
       this.setText('weatherTempUnit', '°C');
+      this.setText('weatherFeelsLikeVal', `${this.rawHeatIndexC.toFixed(1)} °C`);
+      this.setText('weatherMinMaxVal', `${this.rawMinTempC.toFixed(0)}° – ${this.rawMaxTempC.toFixed(0)}°C`);
 
       // Box 3: Temperature Deep Analysis Fields
       this.setText('analysisTempReading', `${this.rawApiTempC.toFixed(1)} °C`);
@@ -429,7 +1071,7 @@ class WeatherAirDashboard {
       if (toggleBtn) {
         toggleBtn.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-sky-400"></i><span>Switch to °F</span>`;
         toggleBtn.title = 'Click to convert to Fahrenheit (°F)';
-        toggleBtn.className = 'px-3 py-1.5 text-xs font-semibold rounded-lg bg-dark-800 text-slate-300 border border-slate-700 hover:border-sky-500 hover:text-white transition cursor-pointer flex items-center gap-1.5 shadow-sm';
+        toggleBtn.className = 'px-2.5 py-1 text-xs font-semibold rounded-lg bg-dark-800 text-slate-300 border border-slate-700 hover:border-sky-500 hover:text-white transition cursor-pointer flex items-center gap-1.5 shadow-sm';
       }
     }
 
@@ -536,3 +1178,12 @@ document.addEventListener('DOMContentLoaded', () => {
   window.weatherAirApp = new WeatherAirDashboard();
   window.weatherAirApp.init();
 });
+
+function escapeHtml(str = '') {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}

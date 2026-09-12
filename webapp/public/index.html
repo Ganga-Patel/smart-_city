@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart City Weather &amp; Air Quality - Anand, Gujarat</title>
+  <title id="pageTitle">Smart City Weather, Air Quality &amp; Mobility</title>
 
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -36,6 +36,10 @@
   <!-- Chart.js for Visual Analysis -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+  <!-- MapLibre GL JS (Open-Source Vector & Raster Map Engine) -->
+  <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="bg-dark-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-sky-500/30 selection:text-sky-200">
@@ -54,35 +58,33 @@
       <div>
         <div class="flex items-center gap-2">
           <h1 class="text-base font-bold tracking-tight text-white">Smart City Weather &amp; Air Quality</h1>
-          <!-- Fixed Location Badge -->
-          <span class="px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1.5">
+          <!-- Dynamic Location Badge -->
+          <span class="px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1.5 shadow-sm">
             <span class="relative flex h-2 w-2">
               <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
             <i data-lucide="map-pin" class="w-3 h-3"></i>
-            <span>Anand, Gujarat, India</span>
+            <span id="headerLocationName">Detecting Nearest Location...</span>
           </span>
         </div>
-        <p class="text-xs text-slate-400 font-medium">Real-Time Weather API Telemetry &amp; Urban Atmospheric Station</p>
+        <p class="text-xs text-slate-400 font-medium">Real-Time Global Weather &amp; Atmospheric Telemetry Platform</p>
       </div>
     </div>
 
-    <!-- Right Controls: Link to Original IoT Dashboard, Live Sync & Refresh -->
+    <!-- Right Controls: Live Sync & Refresh -->
     <div class="flex items-center gap-3">
-      <!-- Switch to Original IoT Command Center Dashboard -->
-      <a href="iot-dashboard.html" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-800/90 hover:bg-slate-700/60 text-slate-300 border border-slate-700 hover:text-white transition shadow-sm">
-        <i data-lucide="cpu" class="w-3.5 h-3.5 text-sky-400"></i>
-        <span>IoT Sensor Command Center</span>
-      </a>
-
-      <div class="h-5 w-px bg-slate-800 hidden sm:block"></div>
 
       <!-- Sync Status -->
       <div class="hidden sm:flex items-center gap-1.5 text-xs text-slate-400 font-mono">
         <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
         <span>Sync: <b id="lastSyncTime" class="text-slate-200">--:--:--</b></span>
       </div>
+
+      <!-- Theme Toggle Button -->
+      <button id="themeToggleBtn" title="Toggle Light/Dark Theme" class="p-2 rounded-xl bg-dark-800/90 border border-slate-700/80 text-slate-300 hover:text-white hover:border-slate-600 transition">
+        <i id="themeIcon" data-lucide="sun" class="w-4 h-4"></i>
+      </button>
 
       <!-- Manual Refresh Button -->
       <button id="manualRefreshBtn" title="Refresh Live Data" class="p-2 rounded-xl bg-dark-800/90 border border-slate-700/80 text-slate-300 hover:text-white hover:border-slate-600 transition">
@@ -94,459 +96,910 @@
   <!-- ================= MAIN CONTENT: THREE BOXES ================= -->
   <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
 
-    <!-- ================= UPPER THREE BOXES GRID ================= -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-      <!-- ========================================================================= -->
-      <!-- BOX 1: WEATHER CONDITIONS                                                 -->
-      <!-- - Temperature, Humidity & Rain: Real-time FROM WEATHER API                 -->
-      <!-- - Other Weather Data: FROM WEATHER API (Anand, Gujarat, India)            -->
-      <!-- - °C / °F Toggle: Directly beside the temperature value                    -->
-      <!-- ========================================================================= -->
-      <section class="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between relative overflow-hidden bg-dark-900/70 shadow-2xl">
-        <!-- Subtle ambient glow -->
-        <div class="absolute -right-16 -top-16 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div>
-          <!-- Box Header -->
-          <div class="flex items-center justify-between pb-4 border-b border-slate-800/80 mb-5">
-            <div class="flex items-center gap-3">
-              <div class="p-2.5 rounded-xl bg-sky-500/20 text-sky-400">
-                <i data-lucide="cloud-sun" class="w-5 h-5"></i>
-              </div>
-              <div>
-                <h2 class="text-base font-bold text-white tracking-tight">Weather Conditions</h2>
-                <p class="text-xs text-slate-400">Anand, Gujarat, India</p>
-              </div>
-            </div>
-            <span class="px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1.5">
-              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Live Weather API Active
-            </span>
-          </div>
-
-          <!-- 1. TEMPERATURE (FROM WEATHER API) WITH °C / °F BUTTON RIGHT BESIDE THE VALUE -->
-          <div class="p-4 rounded-xl bg-dark-950/80 border border-slate-800/90 mb-4">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
-                <i data-lucide="thermometer" class="w-4 h-4 text-rose-400"></i>
-                Ambient Temperature <span class="text-[11px] font-mono text-sky-400 font-semibold">(Weather API)</span>
-              </span>
-              <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                Weather API • Anand
-              </span>
+    <!-- ========================================================================= -->
+    <!-- TOP SEARCH & LOCATION BAR (WORLDWIDE LIVE TELEMETRY & NEAREST DETECTOR)   -->
+    <!-- ========================================================================= -->
+    <section id="topSearchSection" class="relative z-30 glass-panel p-3.5 sm:p-4 rounded-2xl border border-slate-800 bg-dark-900/80 shadow-2xl backdrop-blur-xl">
+      <div class="flex flex-col md:flex-row md:items-center gap-3 justify-between">
+        
+        <!-- Search Input Bar with Autocomplete -->
+        <div class="relative flex-1">
+          <div class="relative flex items-center">
+            <!-- Search Icon -->
+            <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+              <i data-lucide="search" class="w-4 h-4 text-sky-400"></i>
             </div>
 
-            <!-- Temperature Value + Unit + Toggle Button Directly Beside It -->
-            <div class="flex items-center justify-between flex-wrap gap-2">
-              <div class="flex items-baseline gap-1.5">
-                <span id="weatherTempVal" class="text-4xl font-extrabold tracking-tight text-white font-mono">28.2</span>
-                <span id="weatherTempUnit" class="text-2xl font-bold text-sky-400">°C</span>
-              </div>
+            <!-- Input Field -->
+            <input
+              type="text"
+              id="mapSearchInput"
+              placeholder="Search any city or location worldwide (e.g., Mumbai, Delhi, London, New York, Tokyo)..."
+              autocomplete="off"
+              class="w-full pl-10 pr-24 py-2.5 rounded-xl bg-dark-950/90 border border-slate-700/80 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition shadow-inner"
+            >
 
-              <!-- °C / °F Unit Toggle Button directly beside the temperature value -->
-              <button id="tempUnitToggleBtn" title="Click to convert between Celsius (°C) and Fahrenheit (°F)" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-dark-800 text-slate-300 border border-slate-700 hover:border-sky-500 hover:text-white transition cursor-pointer flex items-center gap-1.5 shadow-sm">
-                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-sky-400"></i>
-                <span>Switch to °F</span>
+            <!-- Loading Spinner & Clear Button -->
+            <div class="absolute inset-y-0 right-0 pr-3 flex items-center gap-1.5">
+              <div id="mapSearchSpinner" class="hidden">
+                <i data-lucide="loader-2" class="w-4 h-4 text-sky-400 animate-spin"></i>
+              </div>
+              <button
+                type="button"
+                id="mapSearchClearBtn"
+                title="Clear search"
+                class="hidden text-slate-400 hover:text-white p-1 rounded-md transition cursor-pointer"
+              >
+                <i data-lucide="x" class="w-4 h-4"></i>
               </button>
             </div>
           </div>
 
-          <!-- 2. HUMIDITY (FROM WEATHER API) -->
-          <div class="p-4 rounded-xl bg-dark-950/80 border border-slate-800/90 mb-4">
+          <!-- Autocomplete Dropdown Menu -->
+          <div
+            id="mapSearchResults"
+            class="hidden absolute top-full left-0 right-0 mt-1.5 max-h-72 overflow-y-auto rounded-xl bg-dark-950/95 backdrop-blur-xl border border-slate-700/90 shadow-2xl z-50 divide-y divide-slate-800/60"
+          ></div>
+        </div>
+
+        <!-- Action Controls: "Use Nearest Location" Button + Active Location Pill -->
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <!-- Detect / Use Nearest Location GPS Button -->
+          <button
+            type="button"
+            id="useNearestLocationBtn"
+            title="Detect and switch to your nearest GPS location"
+            class="flex items-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-sky-500/20 to-emerald-500/20 text-sky-300 border border-sky-500/30 hover:border-sky-400 hover:text-white hover:from-sky-500/30 hover:to-emerald-500/30 transition shadow-sm cursor-pointer whitespace-nowrap"
+          >
+            <i data-lucide="crosshair" class="w-4 h-4 text-emerald-400 animate-pulse"></i>
+            <span>Nearest Location</span>
+          </button>
+
+          <!-- Currently Active Location Tag -->
+          <div id="currentActiveLocationPill" class="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-dark-950/80 border border-slate-800 text-xs text-slate-300">
+            <span class="h-2 w-2 rounded-full bg-emerald-400 animate-ping"></span>
+            <span class="text-slate-400">Active:</span>
+            <span id="activeLocationBadgeName" class="font-bold text-white truncate max-w-[140px]">Detecting...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Location Shortcuts -->
+      <div id="mapSearchChips" class="flex items-center gap-1.5 overflow-x-auto pt-2.5 text-[11px] text-slate-400 select-none scrollbar-thin">
+        <span class="text-slate-500 font-semibold flex items-center gap-1 flex-shrink-0">
+          <i data-lucide="sparkles" class="w-3 h-3 text-amber-400"></i>
+          Popular:
+        </span>
+        <button type="button" data-landmark-name="Mumbai" data-lat="19.0760" data-lon="72.8777" class="px-2.5 py-1 rounded-lg bg-dark-950/90 border border-slate-800 hover:border-sky-500 hover:text-sky-300 transition flex-shrink-0 cursor-pointer">
+          🏙️ Mumbai
+        </button>
+        <button type="button" data-landmark-name="Delhi" data-lat="28.6139" data-lon="77.2090" class="px-2.5 py-1 rounded-lg bg-dark-950/90 border border-slate-800 hover:border-sky-500 hover:text-sky-300 transition flex-shrink-0 cursor-pointer">
+          🏛️ Delhi
+        </button>
+        <button type="button" data-landmark-name="Bengaluru" data-lat="12.9716" data-lon="77.5946" class="px-2.5 py-1 rounded-lg bg-dark-950/90 border border-slate-800 hover:border-sky-500 hover:text-sky-300 transition flex-shrink-0 cursor-pointer">
+          ⚡ Bengaluru
+        </button>
+        <button type="button" data-landmark-name="Ahmedabad" data-lat="23.0225" data-lon="72.5714" class="px-2.5 py-1 rounded-lg bg-dark-950/90 border border-slate-800 hover:border-sky-500 hover:text-sky-300 transition flex-shrink-0 cursor-pointer">
+          🕌 Ahmedabad
+        </button>
+        <button type="button" data-landmark-name="London" data-lat="51.5074" data-lon="-0.1278" class="px-2.5 py-1 rounded-lg bg-dark-950/90 border border-slate-800 hover:border-sky-500 hover:text-sky-300 transition flex-shrink-0 cursor-pointer">
+          🎡 London
+        </button>
+        <button type="button" data-landmark-name="New York" data-lat="40.7128" data-lon="-74.0060" class="px-2.5 py-1 rounded-lg bg-dark-950/90 border border-slate-800 hover:border-sky-500 hover:text-sky-300 transition flex-shrink-0 cursor-pointer">
+          🗽 New York
+        </button>
+        <button type="button" data-landmark-name="Tokyo" data-lat="35.6762" data-lon="139.6503" class="px-2.5 py-1 rounded-lg bg-dark-950/90 border border-slate-800 hover:border-sky-500 hover:text-sky-300 transition flex-shrink-0 cursor-pointer">
+          🗼 Tokyo
+        </button>
+        <button type="button" data-landmark-name="Dubai" data-lat="25.2048" data-lon="55.2708" class="px-2.5 py-1 rounded-lg bg-dark-950/90 border border-slate-800 hover:border-sky-500 hover:text-sky-300 transition flex-shrink-0 cursor-pointer">
+          ✨ Dubai
+        </button>
+      </div>
+    </section>
+
+    <!-- ================= UPPER THREE BOXES GRID ================= -->
+    <div id="upperThreeBoxesGrid" class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+
+      <!-- ========================================================================= -->
+      <!-- BOX 1: WEATHER CONDITIONS                                                 -->
+      <!-- - Temperature, Humidity & Rain: Real-time FROM WEATHER API                 -->
+      <!-- - Other Weather Data: FROM WEATHER API (Dynamic Active Location)           -->
+      <!-- - °C / °F Toggle: Directly beside the temperature value                    -->
+      <!-- ========================================================================= -->
+      <section id="weatherConditionsSection" class="glass-panel p-4 sm:p-5 rounded-2xl border border-slate-800 flex flex-col justify-between relative overflow-hidden bg-dark-900/70 shadow-2xl">
+        <!-- Subtle ambient glow -->
+        <div class="absolute -right-16 -top-16 w-48 h-48 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="flex flex-col space-y-3">
+          <!-- Box Header -->
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
+            <div class="flex items-center gap-2.5">
+              <div class="p-2 rounded-xl bg-sky-500/20 text-sky-400">
+                <i data-lucide="cloud-sun" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h2 class="text-sm sm:text-base font-bold text-white tracking-tight">Weather Conditions</h2>
+                <p id="weatherLocationSubtitle" class="text-[11px] text-slate-400">Active Location Telemetry</p>
+              </div>
+            </div>
+            <span class="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1.5">
+              <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Live
+            </span>
+          </div>
+
+          <!-- 1. TEMPERATURE -->
+          <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-semibold text-slate-400 flex items-center gap-1.5">
+                <i data-lucide="thermometer" class="w-3.5 h-3.5 text-rose-400"></i>
+                Ambient Temperature
+              </span>
+              <span id="weatherLocationTag" class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">Weather API</span>
+            </div>
+            <!-- Temp value + toggle in one row -->
             <div class="flex items-center justify-between mb-1.5">
-              <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
-                <i data-lucide="droplets" class="w-4 h-4 text-sky-400"></i>
-                Relative Humidity <span class="text-[11px] font-mono text-sky-400 font-semibold">(Weather API)</span>
-              </span>
-              <span id="weatherHumidityStatus" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                Optimal Moisture
-              </span>
+              <div class="flex items-baseline gap-1">
+                <span id="weatherTempVal" class="text-3xl font-extrabold tracking-tight text-white font-mono">28.2</span>
+                <span id="weatherTempUnit" class="text-lg font-bold text-sky-400">°C</span>
+              </div>
+              <button id="tempUnitToggleBtn" title="Toggle °C / °F" class="px-2 py-0.5 text-[10px] font-semibold rounded-lg bg-dark-800 text-slate-300 border border-slate-700 hover:border-sky-500 hover:text-white transition cursor-pointer flex items-center gap-1 shadow-sm">
+                <i data-lucide="refresh-cw" class="w-2.5 h-2.5 text-sky-400"></i>
+                <span>Switch °F</span>
+              </button>
             </div>
-
-            <div class="flex items-baseline gap-1.5 mb-2">
-              <span id="weatherHumidityVal" class="text-3xl font-extrabold tracking-tight text-white font-mono">68</span>
-              <span class="text-base font-bold text-slate-400">%</span>
+            <!-- Feels Like / Min-Max -->
+            <div class="grid grid-cols-2 gap-1.5 pt-1.5 border-t border-slate-800/80 text-[10px]">
+              <div class="flex items-center justify-between px-2 py-1 rounded-md bg-dark-900/80 border border-slate-800 text-slate-400">
+                <span>Feels Like</span>
+                <span id="weatherFeelsLikeVal" class="font-mono font-semibold text-slate-200">31.3 °C</span>
+              </div>
+              <div class="flex items-center justify-between px-2 py-1 rounded-md bg-dark-900/80 border border-slate-800 text-slate-400">
+                <span>Min / Max</span>
+                <span id="weatherMinMaxVal" class="font-mono font-semibold text-slate-200">24–33°C</span>
+              </div>
             </div>
+          </div>
 
-            <!-- Custom Progress Bar -->
-            <div class="w-full bg-dark-800 rounded-full h-2 overflow-hidden border border-slate-800">
+          <!-- 2. HUMIDITY -->
+          <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-semibold text-slate-400 flex items-center gap-1.5">
+                <i data-lucide="droplets" class="w-3.5 h-3.5 text-sky-400"></i>
+                Relative Humidity
+              </span>
+              <span id="weatherHumidityStatus" class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">Optimal</span>
+            </div>
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-baseline gap-1">
+                <span id="weatherHumidityVal" class="text-2xl font-extrabold tracking-tight text-white font-mono">68</span>
+                <span class="text-sm font-bold text-slate-400">%</span>
+              </div>
+            </div>
+            <div class="w-full bg-dark-800 rounded-full h-1.5 overflow-hidden border border-slate-800">
               <div id="weatherHumidityBar" class="bg-gradient-to-r from-sky-500 to-cyan-400 h-full rounded-full transition-all duration-700" style="width: 68%"></div>
             </div>
           </div>
 
-          <!-- 3. PRECIPITATION & RAINFALL (FROM WEATHER API) -->
-          <div class="p-4 rounded-xl bg-dark-950/80 border border-slate-800/90 mb-4">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
-                <i data-lucide="cloud-rain" class="w-4 h-4 text-cyan-400"></i>
-                Precipitation &amp; Rain <span class="text-[11px] font-mono text-cyan-400 font-semibold">(Weather API)</span>
+          <!-- 3. PRECIPITATION -->
+          <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-semibold text-slate-400 flex items-center gap-1.5">
+                <i data-lucide="cloud-rain" class="w-3.5 h-3.5 text-cyan-400"></i>
+                Precipitation &amp; Rain
               </span>
-              <span id="weatherRainStatus" class="text-[10px] font-semibold px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                0.0 mm (72% Probability)
-              </span>
+              <span id="weatherRainStatus" class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">0.0 mm · 72%</span>
             </div>
-
-            <div class="flex items-baseline justify-between mb-2">
-              <div class="flex items-baseline gap-1.5">
-                <span id="weatherPrecipVal" class="text-3xl font-extrabold tracking-tight text-white font-mono">0.0</span>
-                <span class="text-base font-bold text-slate-400">mm</span>
+            <div class="flex items-center justify-between mb-1.5">
+              <div class="flex items-baseline gap-1">
+                <span id="weatherPrecipVal" class="text-2xl font-extrabold tracking-tight text-white font-mono">0.0</span>
+                <span class="text-sm font-bold text-slate-400">mm</span>
               </div>
-              <div class="text-right">
-                <span class="text-xs text-slate-400">Rain Chance:</span>
-                <span id="weatherRainProbVal" class="text-sm font-bold font-mono text-cyan-400 ml-1">72%</span>
+              <div class="text-right text-[10px]">
+                <span class="text-slate-400">Rain Chance:</span>
+                <span id="weatherRainProbVal" class="text-[11px] font-bold font-mono text-cyan-400 ml-1">72%</span>
               </div>
             </div>
-
-            <!-- Rain Probability Progress Bar -->
-            <div class="space-y-1">
-              <div class="w-full bg-dark-800 rounded-full h-2 overflow-hidden border border-slate-800">
-                <div id="weatherRainBar" class="bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 h-full rounded-full transition-all duration-700" style="width: 72%"></div>
-              </div>
-              <div class="flex justify-between text-[9px] text-slate-500 font-mono pt-0.5">
-                <span>0 mm (Dry)</span>
-                <span>Light Rain</span>
-                <span>Heavy Showers</span>
-              </div>
+            <div class="w-full bg-dark-800 rounded-full h-1.5 overflow-hidden border border-slate-800">
+              <div id="weatherRainBar" class="bg-gradient-to-r from-cyan-500 via-sky-500 to-blue-600 h-full rounded-full transition-all duration-700" style="width: 72%"></div>
             </div>
           </div>
 
-          <!-- 4. OTHER WEATHER DATA FROM WEATHER API (ANAND, GUJARAT, INDIA) -->
-          <div class="space-y-3">
-            <div class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 pt-1">
-              <i data-lucide="cloud" class="w-3.5 h-3.5 text-sky-400"></i>
-              Atmospheric &amp; Wind Telemetry (Weather API)
+          <!-- 4. ATMOSPHERIC & WIND -->
+          <div class="space-y-1.5">
+            <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <i data-lucide="cloud" class="w-3 h-3 text-sky-400"></i>
+              Atmospheric &amp; Wind Telemetry
             </div>
 
-            <!-- Weather Condition Card -->
-            <div class="p-3.5 rounded-xl bg-dark-950/80 border border-slate-800/90 flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <img id="weatherConditionIcon" src="" alt="Weather" class="w-8 h-8 rounded-lg bg-dark-800 p-0.5 border border-slate-700">
+            <!-- Sky Condition + Wind in one row -->
+            <div class="grid grid-cols-2 gap-1.5">
+              <div class="p-2 rounded-xl bg-dark-950/80 border border-slate-800/90 flex items-center gap-2">
+                <img id="weatherConditionIcon" src="" alt="Weather" class="w-6 h-6 rounded-md bg-dark-800 p-0.5 border border-slate-700 flex-shrink-0">
+                <div class="min-w-0">
+                  <div class="text-[9px] text-slate-400">Sky</div>
+                  <div id="weatherConditionText" class="text-[11px] font-bold text-white truncate">Overcast</div>
+                </div>
+              </div>
+              <div class="p-2 rounded-xl bg-dark-950/80 border border-slate-800/90 flex items-center justify-between">
                 <div>
-                  <div class="text-xs text-slate-400">Sky Condition</div>
-                  <div id="weatherConditionText" class="text-sm font-bold text-white">Overcast</div>
+                  <div class="text-[9px] text-slate-400 flex items-center gap-1 mb-0.5">
+                    <i data-lucide="wind" class="w-3 h-3 text-teal-400"></i> Wind
+                  </div>
+                  <span id="weatherWindSpeed" class="text-[11px] font-bold font-mono text-white">11 km/h</span>
                 </div>
-              </div>
-              <span class="text-[11px] font-mono text-slate-400 bg-dark-800 px-2 py-0.5 rounded border border-slate-700">Anand Live</span>
-            </div>
-
-            <!-- Wind Speed & Direction -->
-            <div class="p-3.5 rounded-xl bg-dark-950/80 border border-slate-800/90 flex items-center justify-between">
-              <div>
-                <div class="text-xs text-slate-400 flex items-center gap-1.5 mb-1">
-                  <i data-lucide="wind" class="w-3.5 h-3.5 text-teal-400"></i>
-                  Wind Speed &amp; Heading
-                </div>
-                <div class="flex items-baseline gap-2">
-                  <span id="weatherWindSpeed" class="text-xl font-bold font-mono text-white">11 km/h</span>
-                  <span id="weatherWindDir" class="text-xs text-slate-400 font-mono">W (273°)</span>
-                </div>
-              </div>
-
-              <!-- Compass Rotating Indicator -->
-              <div class="h-9 w-9 rounded-full bg-dark-800 border border-slate-700 flex items-center justify-center relative">
-                <div id="weatherCompassNeedle" class="w-5 h-5 flex items-center justify-center transition-transform duration-700" style="transform: rotate(273deg);">
-                  <i data-lucide="navigation-2" class="w-4 h-4 text-amber-400 fill-amber-400"></i>
+                <div class="flex items-center gap-1">
+                  <span id="weatherWindDir" class="text-[10px] font-mono font-bold text-slate-300">W</span>
+                  <div class="w-5 h-5 rounded-full bg-dark-900 border border-slate-700 flex items-center justify-center">
+                    <i id="weatherCompassNeedle" data-lucide="navigation" class="w-2.5 h-2.5 text-sky-400 transform rotate-[266deg] transition-transform duration-700"></i>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Pressure, UV Index, Visibility -->
-            <div class="grid grid-cols-3 gap-2.5 text-center">
-              <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
-                <div class="text-[10px] text-slate-400 mb-0.5">Air Pressure</div>
-                <div id="weatherPressure" class="text-xs font-bold text-white font-mono">1004 hPa</div>
+            <!-- Pressure / UV / Visibility -->
+            <div class="grid grid-cols-3 gap-1.5">
+              <div class="p-2 rounded-xl bg-dark-950/80 border border-slate-800/90 text-center">
+                <div class="text-[9px] text-slate-400 mb-0.5">Pressure</div>
+                <div id="weatherPressure" class="text-[11px] font-bold text-white font-mono">1011 hPa</div>
               </div>
-              <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
-                <div class="text-[10px] text-slate-400 mb-0.5">UV Index</div>
-                <div id="weatherUv" class="text-xs font-bold text-white font-mono">UV 4</div>
+              <div class="p-2 rounded-xl bg-dark-950/80 border border-slate-800/90 text-center">
+                <div class="text-[9px] text-slate-400 mb-0.5">UV Index</div>
+                <div id="weatherUv" class="text-[11px] font-bold text-amber-400 font-mono">UV 4</div>
               </div>
-              <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
-                <div class="text-[10px] text-slate-400 mb-0.5">Visibility</div>
-                <div id="weatherVisibility" class="text-xs font-bold text-white font-mono">10 km</div>
+              <div class="p-2 rounded-xl bg-dark-950/80 border border-slate-800/90 text-center">
+                <div class="text-[9px] text-slate-400 mb-0.5">Visibility</div>
+                <div id="weatherVisibility" class="text-[11px] font-bold text-white font-mono">10 km</div>
               </div>
             </div>
-
           </div>
         </div>
 
-        <div class="pt-4 border-t border-slate-800/80 text-xs text-slate-500 flex items-center justify-between mt-4">
-          <span>Data Source: Live Weather API (Anand, Gujarat)</span>
+        <div class="pt-3 border-t border-slate-800/80 text-[10px] text-slate-500 flex items-center justify-between mt-2">
+          <span id="weatherFooterSource">Data Source: Live Meteorological API</span>
           <span class="font-mono text-emerald-400">Updated Real-Time</span>
         </div>
       </section>
 
       <!-- ========================================================================= -->
-      <!-- BOX 2: AIR QUALITY (WITH GLOWING CIRCULAR AQI GAUGE - ANAND, GUJARAT)      -->
+      <!-- BOX 2: SOLAR & LUNAR EPHEMERIS (SUNRISE, SUNSET, MOON CYCLE & MOONRISE)   -->
       <!-- ========================================================================= -->
-      <section class="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between relative overflow-hidden bg-dark-900/70 shadow-2xl">
-        <!-- Subtle ambient glow -->
-        <div class="absolute -right-16 -top-16 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <section id="solarLunarSection" class="glass-panel p-4 sm:p-5 rounded-2xl border border-slate-800 flex flex-col justify-between relative overflow-hidden bg-dark-900/70 shadow-2xl">
+          <!-- Subtle ambient glow -->
+          <div class="absolute -right-14 -top-14 w-44 h-44 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        <div>
-          <!-- Box Header -->
-          <div class="flex items-center justify-between pb-4 border-b border-slate-800/80 mb-5">
-            <div class="flex items-center gap-3">
-              <div class="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400">
-                <i data-lucide="shield" class="w-5 h-5"></i>
+          <div class="flex-1 flex flex-col gap-3 mb-3">
+            <!-- Box Header -->
+            <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-1">
+              <div class="flex items-center gap-2.5">
+                <div class="p-2 rounded-xl bg-amber-500/20 text-amber-400">
+                  <i data-lucide="sun-medium" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h2 class="text-sm sm:text-base font-bold text-white tracking-tight">Solar &amp; Lunar Ephemeris</h2>
+                  <p id="ephemerisLocationSubtitle" class="text-[11px] text-slate-400">Solar &amp; Celestial Cycles</p>
+                </div>
               </div>
-              <div>
-                <h2 class="text-base font-bold text-white tracking-tight">Air Quality Index</h2>
-                <p class="text-xs text-slate-400">Anand, Gujarat, India</p>
+              <span class="px-2 py-0.5 text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full flex items-center gap-1">
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                <span>Daylight Sync</span>
+              </span>
+            </div>
+
+            <!-- 1. SUNRISE & SUNSET WITH SOLAR ARC PROGRESS -->
+            <div class="flex-1 flex flex-col justify-center p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                  <i data-lucide="sun" class="w-3.5 h-3.5 text-amber-400"></i>
+                  Solar Progression
+                </span>
+                <span id="ephemerisSolarNoon" class="text-[10px] font-mono text-amber-400/90 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                  Noon: 12:34 PM
+                </span>
+              </div>
+
+              <!-- Sunrise & Sunset Dual Cards -->
+              <div class="grid grid-cols-1 gap-2 mb-2">
+                <!-- Sunrise Card -->
+                <div class="p-2 rounded-lg bg-dark-900/90 border border-slate-800/90 flex items-center gap-2">
+                  <div class="p-1.5 rounded-lg bg-amber-500/15 text-amber-400 flex-shrink-0">
+                    <i data-lucide="sunrise" class="w-3.5 h-3.5"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-[9px] text-slate-400 font-semibold uppercase">Sunrise</div>
+                    <div id="ephemerisSunrise" class="text-xs sm:text-sm font-bold font-mono text-white">06:24 AM</div>
+                    <div class="text-[8px] text-amber-400/80">Dawn Twilight</div>
+                  </div>
+                </div>
+
+                <!-- Sunset Card -->
+                <div class="p-2 rounded-lg bg-dark-900/90 border border-slate-800/90 flex items-center gap-2">
+                  <div class="p-1.5 rounded-lg bg-rose-500/15 text-rose-400 flex-shrink-0">
+                    <i data-lucide="sunset" class="w-3.5 h-3.5"></i>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="text-[9px] text-slate-400 font-semibold uppercase">Sunset</div>
+                    <div id="ephemerisSunset" class="text-xs sm:text-sm font-bold font-mono text-white">06:44 PM</div>
+                    <div class="text-[8px] text-rose-400/80">Dusk Twilight</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Daylight Duration & Sun Arc Tracker -->
+              <div class="space-y-0.5 mt-auto pt-2">
+                <div class="flex items-center justify-between text-[10px] text-slate-400">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="clock" class="w-3 h-3 text-sky-400"></i>
+                    Daylight: <b id="ephemerisDaylightDuration" class="text-white font-mono">12h 20m</b>
+                  </span>
+                  <span id="ephemerisDaylightStatus" class="text-amber-400 font-mono">54% elapsed</span>
+                </div>
+                <div class="w-full bg-dark-800 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                  <div id="ephemerisDaylightBar" class="bg-gradient-to-r from-amber-500 via-yellow-400 to-rose-500 h-full rounded-full transition-all duration-700" style="width: 54%"></div>
+                </div>
               </div>
             </div>
-            <span id="airAqiPill" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-              Good (Healthy)
-            </span>
+
+            <!-- 2. LUNAR CYCLE & MOONRISE / MOONSET -->
+            <div class="flex-1 flex flex-col justify-center p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
+                  <i data-lucide="moon" class="w-3.5 h-3.5 text-cyan-400"></i>
+                  Lunar Cycle of the Moon
+                </span>
+                <span id="ephemerisMoonCycleDay" class="text-[10px] font-mono text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
+                  Day 1.5 of 29.5
+                </span>
+              </div>
+
+              <!-- Lunar Phase Detail Card -->
+              <div class="flex items-center justify-between p-2 rounded-lg bg-dark-900/90 border border-slate-800/90 mb-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span id="ephemerisMoonIcon" class="text-xl flex-shrink-0 select-none">🌒</span>
+                  <div class="min-w-0">
+                    <div id="ephemerisMoonPhase" class="text-xs font-bold text-white truncate">Waxing Crescent</div>
+                    <div id="ephemerisMoonIllumination" class="text-[9px] text-cyan-300 font-mono">2% Illuminated Face</div>
+                  </div>
+                </div>
+                <div class="text-right flex-shrink-0">
+                  <div class="text-[8px] text-slate-500 uppercase">Synodic Month</div>
+                  <div id="ephemerisSynodicProgress" class="text-xs font-bold font-mono text-slate-300">Phase 1 / 8</div>
+                </div>
+              </div>
+
+              <!-- Moonrise & Moonset Row -->
+              <!-- Moonrise & Moonset Row -->
+              <div class="grid grid-cols-1 gap-2">
+                <!-- Moonrise Card -->
+                <div class="p-2 rounded-lg bg-dark-900/90 border border-slate-800/90 flex items-center gap-2">
+                  <div class="p-1.5 rounded-lg bg-cyan-500/15 text-cyan-400 flex-shrink-0">
+                    <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+                  </div>
+                  <div class="min-w-0 text-left">
+                    <div class="text-[9px] text-slate-400 font-semibold uppercase">Moonrise</div>
+                    <div id="ephemerisMoonrise" class="text-xs sm:text-sm font-bold font-mono text-cyan-300">06:44 AM</div>
+                    <div class="text-[8px] text-cyan-400/60">Ascending Phase</div>
+                  </div>
+                </div>
+
+                <!-- Moonset Card -->
+                <div class="p-2 rounded-lg bg-dark-900/90 border border-slate-800/90 flex items-center gap-2">
+                  <div class="p-1.5 rounded-lg bg-slate-500/15 text-slate-400 flex-shrink-0">
+                    <i data-lucide="arrow-down-right" class="w-3.5 h-3.5"></i>
+                  </div>
+                  <div class="min-w-0 text-left">
+                    <div class="text-[9px] text-slate-400 font-semibold uppercase">Moonset</div>
+                    <div id="ephemerisMoonset" class="text-xs sm:text-sm font-bold font-mono text-slate-300">07:08 PM</div>
+                    <div class="text-[8px] text-slate-400/60">Descending Phase</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Lunar Progression Bar -->
+              <div class="mt-auto pt-2 space-y-0.5">
+                <div class="flex justify-between text-[8px] text-slate-500 font-mono">
+                  <span>🌑 New Moon</span>
+                  <span>🌓 First Qtr</span>
+                  <span>🌕 Full</span>
+                  <span>🌗 Last Qtr</span>
+                </div>
+                <div class="w-full bg-dark-800 rounded-full h-2.5 overflow-hidden border border-slate-800">
+                  <div id="ephemerisMoonCycleBar" class="bg-gradient-to-r from-sky-400 to-indigo-400 h-full rounded-full transition-all duration-700" style="width: 5%"></div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <!-- Circular Glowing Radial AQI Gauge -->
-          <div class="p-4 rounded-xl bg-dark-950/80 border border-slate-800/90 mb-4 flex flex-col items-center justify-center">
-            <div class="relative flex items-center justify-center w-36 h-36 my-1">
-              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" stroke="#1e293b" stroke-width="8" fill="transparent"/>
-                <circle id="aqiCircleRing" cx="50" cy="50" r="40" stroke="url(#aqiEmeraldGrad)" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="195" stroke-linecap="round" fill="transparent" class="transition-all duration-1000"/>
-                <defs>
-                  <linearGradient id="aqiEmeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#10b981" />
-                    <stop offset="100%" stop-color="#38bdf8" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div class="absolute flex flex-col items-center justify-center">
-                <span id="airAqiScore" class="text-4xl font-extrabold tracking-tight text-white font-mono">43</span>
-                <span id="airAqiStatus" class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider mt-0.5">GOOD</span>
-              </div>
-            </div>
-
-            <div class="w-full text-center mt-2">
-              <div class="text-[11px] text-slate-400">Overall Ambient Air Quality Standard</div>
-              <div class="flex justify-between text-[9px] text-slate-500 font-mono mt-1 px-4">
-                <span>0 Good</span>
-                <span>50 Moderate</span>
-                <span>100 Unhealthy</span>
-                <span>200+ Hazardous</span>
-              </div>
-            </div>
+          <div class="pt-3 border-t border-slate-800/80 text-[10px] text-slate-500 flex items-center justify-between mt-auto">
+            <span>Ephemeris: Open-Meteo &amp; Algorithm</span>
+            <span class="font-mono text-cyan-400">Live Celestial Sync</span>
           </div>
+        </section>
 
-          <!-- Particulate Matter: PM2.5 and PM10 -->
-          <div class="grid grid-cols-2 gap-3 mb-4">
-            <!-- PM2.5 -->
-            <div class="p-3.5 rounded-xl bg-dark-950/80 border border-slate-800/90">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-xs font-semibold text-slate-400">PM2.5 (Fine Dust)</span>
-                <span class="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400">Safe</span>
-              </div>
-              <div id="airPm25" class="text-xl font-bold text-white font-mono">17.9 µg/m³</div>
-              <p class="text-[10px] text-slate-500 mt-1">Inhalable fine particles</p>
-            </div>
+        <!-- ======================================================================= -->
 
-            <!-- PM10 -->
-            <div class="p-3.5 rounded-xl bg-dark-950/80 border border-slate-800/90">
-              <div class="flex items-center justify-between mb-1">
-                <span class="text-xs font-semibold text-slate-400">PM10 (Coarse Dust)</span>
-                <span class="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400">Safe</span>
-              </div>
-              <div id="airPm10" class="text-xl font-bold text-white font-mono">39.1 µg/m³</div>
-              <p class="text-[10px] text-slate-500 mt-1">Respirable suspended dust</p>
-            </div>
-          </div>
-
-          <!-- Trace Atmospheric Pollutants -->
-          <div class="space-y-2">
-            <div class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <i data-lucide="gauge" class="w-3.5 h-3.5 text-emerald-400"></i>
-              Trace Gas Concentrations
-            </div>
-
-            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-              <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
-                <div class="text-[10px] text-slate-400 font-semibold mb-0.5">NO₂ (Nitrogen)</div>
-                <div id="airNo2" class="text-sm font-bold text-white font-mono">5.8 µg/m³</div>
-              </div>
-
-              <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
-                <div class="text-[10px] text-slate-400 font-semibold mb-0.5">O₃ (Ozone)</div>
-                <div id="airO3" class="text-sm font-bold text-white font-mono">38.0 µg/m³</div>
-              </div>
-
-              <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
-                <div class="text-[10px] text-slate-400 font-semibold mb-0.5">CO (Carbon Monoxide)</div>
-                <div id="airCo" class="text-sm font-bold text-white font-mono">123 µg/m³</div>
-              </div>
-
-              <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
-                <div class="text-[10px] text-slate-400 font-semibold mb-0.5">SO₂ (Sulfur)</div>
-                <div id="airSo2" class="text-sm font-bold text-white font-mono">9.6 µg/m³</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="pt-4 border-t border-slate-800/80 text-xs text-slate-500 flex items-center justify-between mt-4">
-          <span>Standard: EPA Air Quality Index</span>
-          <span class="font-mono text-emerald-400">Healthy Atmosphere</span>
-        </div>
-      </section>
 
       <!-- ========================================================================= -->
       <!-- BOX 3: URBAN TRAFFIC & MOBILITY (TOMTOM API / ANAND TRAFFIC FLOW)         -->
       <!-- ========================================================================= -->
-      <section class="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between relative overflow-hidden bg-dark-900/70 shadow-2xl">
+      <section id="urbanTrafficSection" class="glass-panel p-4 sm:p-5 rounded-2xl border border-slate-800 flex flex-col justify-between relative overflow-hidden bg-dark-900/70 shadow-2xl">
         <!-- Subtle ambient glow -->
         <div class="absolute -right-16 -top-16 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        <div>
+        <div class="flex-1 flex flex-col gap-3 mb-3">
           <!-- Box Header -->
-          <div class="flex items-center justify-between pb-4 border-b border-slate-800/80 mb-5">
-            <div class="flex items-center gap-3">
-              <div class="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
-                <i data-lucide="navigation" class="w-5 h-5"></i>
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800/80">
+            <div class="flex items-center gap-2.5">
+              <div class="p-2 rounded-xl bg-amber-500/20 text-amber-400">
+                <i data-lucide="navigation" class="w-4 h-4"></i>
               </div>
               <div>
-                <h2 class="text-base font-bold text-white tracking-tight">Urban Traffic &amp; Mobility</h2>
-                <p class="text-xs text-slate-400">Anand, Gujarat, India</p>
+                <h2 class="text-sm sm:text-base font-bold text-white tracking-tight">Urban Traffic &amp; Mobility</h2>
+                <p id="trafficLocationSubtitle" class="text-[11px] text-slate-400">Arterial Flow &bull; Real-Time Telemetry</p>
               </div>
             </div>
-            <span id="trafficStatusBadge" class="px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1.5">
+            <span id="trafficStatusBadge" class="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1.5">
               <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
               <span id="trafficStatusText">Smooth Flow</span>
             </span>
           </div>
 
-          <!-- 1. Live Arterial Velocity vs Baseline -->
-          <div class="p-4 rounded-xl bg-dark-950/80 border border-slate-800/90 mb-4">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-xs font-semibold text-slate-400 flex items-center gap-1.5">
-                <i data-lucide="gauge" class="w-4 h-4 text-amber-400"></i>
-                Arterial Flow Velocity
-              </span>
-              <span id="trafficFreeFlowSpeed" class="text-[10px] font-mono text-slate-400 bg-dark-800 px-2 py-0.5 rounded border border-slate-700">
-                Baseline: 50 km/h
-              </span>
+          <!-- 1. Velocity & Congestion Grid -->
+          <div class="grid grid-cols-2 gap-2 mb-1">
+            
+            <!-- Left Card: Arterial Velocity -->
+            <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90 flex flex-col justify-center">
+              <div class="text-[10px] font-semibold text-slate-400 flex items-center gap-1.5 mb-2">
+                <i data-lucide="gauge" class="w-3.5 h-3.5 text-amber-400"></i>
+                Arterial Velocity
+              </div>
+              <div class="flex items-baseline gap-1 mb-1">
+                <span id="trafficCurrentSpeed" class="text-3xl font-extrabold tracking-tight text-white font-mono">35</span>
+                <span id="trafficSpeedUnit" class="text-base font-bold text-slate-400">km/h</span>
+              </div>
+              <div class="text-[10px] mt-1">
+                <span class="text-slate-400">Flow Efficiency: </span>
+                <span id="trafficEfficiencyText" class="text-emerald-400 font-mono font-bold">Optimal</span>
+              </div>
             </div>
 
-            <div class="flex items-baseline justify-between">
-              <div class="flex items-baseline gap-1.5">
-                <span id="trafficCurrentSpeed" class="text-4xl font-extrabold tracking-tight text-white font-mono">35</span>
-                <span class="text-xl font-bold text-slate-400">km/h</span>
+            <!-- Right Card: Congestion Ring -->
+            <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90 flex flex-col items-center justify-center gap-2">
+              <span id="trafficFreeFlowSpeed" class="text-[9px] font-mono text-slate-400 bg-dark-800 px-2 py-1 rounded border border-slate-700 w-full text-center">Baseline: 50 km/h</span>
+              
+              <!-- Increased Ring Size -->
+              <div class="relative w-24 h-24">
+                <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                  <circle cx="50" cy="50" r="40" stroke="#1e293b" stroke-width="8" fill="transparent"/>
+                  <circle id="trafficCircleRing" cx="50" cy="50" r="40" stroke="url(#trafficAmberGrad)" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="175" stroke-linecap="round" fill="transparent" class="transition-all duration-1000"/>
+                  <defs>
+                    <linearGradient id="trafficAmberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stop-color="#10b981" />
+                      <stop offset="60%" stop-color="#f59e0b" />
+                      <stop offset="100%" stop-color="#ef4444" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <span id="trafficCongestionVal" class="text-2xl font-extrabold tracking-tight text-white font-mono">30%</span>
+                  <span id="trafficCongestionLabel" class="text-[8px] font-bold text-amber-400 uppercase tracking-wider text-center leading-none mt-0.5">MODERATE</span>
+                </div>
               </div>
-              <div class="text-right text-xs">
-                <span class="text-slate-400">Flow Efficiency:</span>
-                <span id="trafficEfficiencyText" class="text-emerald-400 font-mono font-bold ml-1">Optimal</span>
-              </div>
+              <div class="text-[8px] text-slate-500 font-mono text-center">Congestion Status</div>
             </div>
           </div>
 
-          <!-- 2. Circular Congestion & Saturation Radial Gauge -->
-          <div class="p-4 rounded-xl bg-dark-950/80 border border-slate-800/90 mb-4 flex flex-col items-center justify-center">
-            <div class="relative flex items-center justify-center w-36 h-36 my-1">
-              <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" stroke="#1e293b" stroke-width="8" fill="transparent"/>
-                <circle id="trafficCircleRing" cx="50" cy="50" r="40" stroke="url(#trafficAmberGrad)" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="175" stroke-linecap="round" fill="transparent" class="transition-all duration-1000"/>
-                <defs>
-                  <linearGradient id="trafficAmberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#10b981" />
-                    <stop offset="60%" stop-color="#f59e0b" />
-                    <stop offset="100%" stop-color="#ef4444" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <div class="absolute flex flex-col items-center justify-center">
-                <span id="trafficCongestionVal" class="text-3xl font-extrabold tracking-tight text-white font-mono">30%</span>
-                <span id="trafficCongestionLabel" class="text-[10px] font-bold text-amber-400 uppercase tracking-wider mt-0.5">MODERATE</span>
-              </div>
+          <!-- 2. Transit Metrics Grid: Delay, Confidence, Incidents -->
+          <div class="grid grid-cols-3 gap-1.5 text-center">
+            <div class="p-2 rounded-xl bg-dark-950/80 border border-slate-800/90">
+              <div class="text-[9px] text-slate-400 mb-0.5">Commute Delay</div>
+              <div id="trafficDelayVal" class="text-[11px] font-bold text-sky-400 font-mono">+55 sec</div>
             </div>
-
-            <div class="w-full text-center mt-2">
-              <div class="text-[11px] text-slate-400">Urban Congestion &amp; Saturation Index</div>
-              <div class="flex justify-between text-[9px] text-slate-500 font-mono mt-1 px-4">
-                <span>0% Free</span>
-                <span>30% Normal</span>
-                <span>60% Dense</span>
-                <span>100% Gridlock</span>
-              </div>
+            <div class="p-2 rounded-xl bg-dark-950/80 border border-slate-800/90">
+              <div class="text-[9px] text-slate-400 mb-0.5">Confidence</div>
+              <div id="trafficConfidenceVal" class="text-[11px] font-bold text-white font-mono">95%</div>
+            </div>
+            <div class="p-2 rounded-xl bg-dark-950/80 border border-slate-800/90">
+              <div class="text-[9px] text-slate-400 mb-0.5">Road Incidents</div>
+              <div id="trafficIncidentsVal" class="text-[11px] font-bold text-emerald-400 font-mono">0 Alerts</div>
             </div>
           </div>
 
-          <!-- 3. Transit Metrics Grid: Delay, Confidence, Incidents -->
-          <div class="grid grid-cols-3 gap-2.5 text-center mb-4">
-            <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
-              <div class="text-[10px] text-slate-400 mb-0.5">Commute Delay</div>
-              <div id="trafficDelayVal" class="text-xs font-bold text-sky-400 font-mono">+55 sec</div>
-            </div>
-            <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
-              <div class="text-[10px] text-slate-400 mb-0.5">Confidence</div>
-              <div id="trafficConfidenceVal" class="text-xs font-bold text-white font-mono">95%</div>
-            </div>
-            <div class="p-3 rounded-xl bg-dark-950/80 border border-slate-800/90">
-              <div class="text-[10px] text-slate-400 mb-0.5">Road Incidents</div>
-              <div id="trafficIncidentsVal" class="text-xs font-bold text-emerald-400 font-mono">0 Alerts</div>
-            </div>
-          </div>
-
-          <!-- 4. Key Transit Corridors in Anand -->
-          <div class="space-y-2">
-            <div class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center justify-between">
-              <span class="flex items-center gap-1.5">
-                <i data-lucide="map-pin" class="w-3.5 h-3.5 text-amber-400"></i>
-                Key Anand Transit Corridors
+          <!-- 3. Key Transit Corridors -->
+          <div class="space-y-1.5">
+            <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+              <span id="trafficCorridorsTitle" class="flex items-center gap-1.5">
+                <i data-lucide="map-pin" class="w-3 h-3 text-amber-400"></i>
+                <span>Active Transit Corridors</span>
               </span>
-              <span class="text-[10px] font-mono text-slate-500">Live Segments</span>
+              <span class="text-[9px] font-mono text-slate-500">Live Segments</span>
             </div>
 
-            <div id="trafficCorridorsList" class="space-y-1.5">
-              <div class="p-2.5 rounded-lg bg-dark-950/80 border border-slate-800 flex items-center justify-between">
+            <div id="trafficCorridorsList" class="space-y-1">
+              <div class="px-2.5 py-1.5 rounded-lg bg-dark-950/80 border border-slate-800 flex items-center justify-between">
                 <div class="truncate mr-2">
-                  <div class="text-xs font-semibold text-slate-200 truncate">Anand – Vidyanagar Road (SH 188)</div>
+                  <div class="text-[11px] font-semibold text-slate-200 truncate">Anand – Vidyanagar Road (SH 188)</div>
                   <div class="text-[10px] text-emerald-400 font-mono">Smooth Flow</div>
                 </div>
                 <div class="text-right shrink-0">
-                  <div class="text-xs font-bold font-mono text-white">33 km/h</div>
-                  <div class="text-[9px] text-slate-500 font-mono">Free: 50 km/h</div>
+                  <div class="text-[11px] font-bold font-mono text-white">33 km/h</div>
+                  <div class="text-[9px] text-slate-500 font-mono">Free: 50</div>
                 </div>
               </div>
-              <div class="p-2.5 rounded-lg bg-dark-950/80 border border-slate-800 flex items-center justify-between">
+              <div class="px-2.5 py-1.5 rounded-lg bg-dark-950/80 border border-slate-800 flex items-center justify-between">
                 <div class="truncate mr-2">
-                  <div class="text-xs font-semibold text-slate-200 truncate">Station Road (Anand Junction)</div>
+                  <div class="text-[11px] font-semibold text-slate-200 truncate">Station Road (Anand Junction)</div>
                   <div class="text-[10px] text-slate-400 font-mono">Normal Flow</div>
                 </div>
                 <div class="text-right shrink-0">
-                  <div class="text-xs font-bold font-mono text-white">27 km/h</div>
-                  <div class="text-[9px] text-slate-500 font-mono">Free: 40 km/h</div>
+                  <div class="text-[11px] font-bold font-mono text-white">27 km/h</div>
+                  <div class="text-[9px] text-slate-500 font-mono">Free: 40</div>
                 </div>
               </div>
-              <div class="p-2.5 rounded-lg bg-dark-950/80 border border-slate-800 flex items-center justify-between">
+              <div class="px-2.5 py-1.5 rounded-lg bg-dark-950/80 border border-slate-800 flex items-center justify-between">
                 <div class="truncate mr-2">
-                  <div class="text-xs font-semibold text-slate-200 truncate">NH 48 Samarkha Expressway</div>
+                  <div class="text-[11px] font-semibold text-slate-200 truncate">NH 48 Samarkha Expressway</div>
                   <div class="text-[10px] text-teal-400 font-mono">Rapid / Free Flow</div>
                 </div>
                 <div class="text-right shrink-0">
-                  <div class="text-xs font-bold font-mono text-white">71 km/h</div>
-                  <div class="text-[9px] text-slate-500 font-mono">Free: 80 km/h</div>
+                  <div class="text-[11px] font-bold font-mono text-white">71 km/h</div>
+                  <div class="text-[9px] text-slate-500 font-mono">Free: 80</div>
                 </div>
               </div>
-              <div class="p-2.5 rounded-lg bg-dark-950/80 border border-slate-800 flex items-center justify-between">
+              <div class="px-2.5 py-1.5 rounded-lg bg-dark-950/80 border border-slate-800 flex items-center justify-between">
                 <div class="truncate mr-2">
-                  <div class="text-xs font-semibold text-slate-200 truncate">Borsad Chokdi Junction</div>
+                  <div class="text-[11px] font-semibold text-slate-200 truncate">Borsad Chokdi Junction</div>
                   <div class="text-[10px] text-slate-400 font-mono">Normal Flow</div>
                 </div>
                 <div class="text-right shrink-0">
-                  <div class="text-xs font-bold font-mono text-white">29 km/h</div>
-                  <div class="text-[9px] text-slate-500 font-mono">Free: 45 km/h</div>
+                  <div class="text-[11px] font-bold font-mono text-white">29 km/h</div>
+                  <div class="text-[9px] text-slate-500 font-mono">Free: 45</div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="pt-4 border-t border-slate-800/80 text-xs text-slate-500 flex items-center justify-between mt-4">
+        <div class="pt-3 border-t border-slate-800/80 text-[10px] text-slate-500 flex items-center justify-between mt-2">
           <span>Standard: TomTom Flow API</span>
           <span class="font-mono text-emerald-400">Live Mobility Sync</span>
         </div>
       </section>
 
     </div>
+
+    <!-- ======================================================================= -->
+    <!-- ROW 2: STREAMLINED AIR QUALITY INDEX (HORIZONTAL LAYOUT)                -->
+    <!-- ======================================================================= -->
+    <section id="airQualitySection" class="glass-panel p-4 sm:p-5 rounded-2xl border border-slate-800 relative overflow-hidden bg-dark-900/70 shadow-2xl">
+      <!-- Subtle ambient glow -->
+      <div class="absolute -right-14 -top-14 w-44 h-44 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="flex flex-col lg:flex-row gap-5 lg:gap-8 items-center justify-between relative z-10">
+        
+        <!-- 1. AQI Gauge & Score (Left Side) -->
+        <div class="flex items-center gap-4 lg:w-1/3 w-full">
+          <div class="relative flex items-center justify-center w-24 h-24 flex-shrink-0">
+            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="40" stroke="#1e293b" stroke-width="8" fill="transparent"/>
+              <circle id="aqiCircleRing" cx="50" cy="50" r="40" stroke="url(#aqiEmeraldGrad)" stroke-width="8" stroke-dasharray="251.2" stroke-dashoffset="195" stroke-linecap="round" fill="transparent" class="transition-all duration-1000"/>
+              <defs>
+                <linearGradient id="aqiEmeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#10b981" />
+                  <stop offset="100%" stop-color="#38bdf8" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="absolute flex flex-col items-center justify-center">
+              <span id="airAqiScore" class="text-2xl font-extrabold tracking-tight text-white font-mono">43</span>
+              <span id="airAqiStatus" class="text-[9px] font-bold text-emerald-400 uppercase tracking-wider">GOOD</span>
+            </div>
+          </div>
+          <div class="min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <h2 class="text-base font-bold text-white tracking-tight">Air Quality Index</h2>
+              <span id="airAqiPill" class="px-2 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Good (Healthy)
+              </span>
+            </div>
+            <p class="text-[11px] text-slate-400 mb-1.5 leading-tight">Ambient air purity meets NAAQS thresholds for outdoor activities.</p>
+            <div class="flex items-center gap-2 text-[9px] text-slate-500 font-mono">
+              <span>0 Safe</span> &bull; <span>50 Mod</span> &bull; <span>100 Unsafe</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Particulate & Trace Pollutants (Right Side) -->
+        <div class="flex-1 w-full lg:w-2/3 grid grid-cols-2 md:grid-cols-6 gap-3">
+          <!-- PM2.5 -->
+          <div class="col-span-1 md:col-span-1 p-2 rounded-xl bg-dark-950/80 border border-slate-800/90 text-center flex flex-col justify-center">
+            <div class="text-[10px] font-semibold text-slate-400 mb-1">PM2.5 (Fine)</div>
+            <div id="airPm25" class="text-sm font-bold text-white font-mono">17.9 µg</div>
+          </div>
+          <!-- PM10 -->
+          <div class="col-span-1 md:col-span-1 p-2 rounded-xl bg-dark-950/80 border border-slate-800/90 text-center flex flex-col justify-center">
+            <div class="text-[10px] font-semibold text-slate-400 mb-1">PM10 (Coarse)</div>
+            <div id="airPm10" class="text-sm font-bold text-white font-mono">39.1 µg</div>
+          </div>
+          <!-- Trace Pollutants (Grid of 4) -->
+          <div class="col-span-2 md:col-span-4 grid grid-cols-4 gap-2">
+            <div class="p-2 rounded-xl bg-dark-950/80 border border-slate-800/90 text-center flex flex-col justify-center">
+              <div class="text-[9px] text-slate-400 font-semibold mb-1">NO₂</div>
+              <div id="airNo2" class="text-[11px] font-bold text-white font-mono">5.8 µg</div>
+            </div>
+            <div class="p-2 rounded-xl bg-dark-950/80 border border-slate-800/90 text-center flex flex-col justify-center">
+              <div class="text-[9px] text-slate-400 font-semibold mb-1">O₃</div>
+              <div id="airO3" class="text-[11px] font-bold text-white font-mono">38.0 µg</div>
+            </div>
+            <div class="p-2 rounded-xl bg-dark-950/80 border border-slate-800/90 text-center flex flex-col justify-center">
+              <div class="text-[9px] text-slate-400 font-semibold mb-1">CO</div>
+              <div id="airCo" class="text-[11px] font-bold text-white font-mono">123 µg</div>
+            </div>
+            <div class="p-2 rounded-xl bg-dark-950/80 border border-slate-800/90 text-center flex flex-col justify-center">
+              <div class="text-[9px] text-slate-400 font-semibold mb-1">SO₂</div>
+              <div id="airSo2" class="text-[11px] font-bold text-white font-mono">9.6 µg</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========================================================================= -->
+    <!-- URBAN LIVE MAP CANVAS (MAPLIBRE GL + CARTO/OSM TILES — ANAND, GUJARAT)    -->
+    <!-- ========================================================================= -->
+    <section id="urbanMapSection" class="glass-panel p-6 rounded-2xl border border-slate-800 bg-dark-900/70 shadow-2xl relative overflow-hidden space-y-4">
+      <!-- Ambient decorative glow -->
+      <div class="absolute -right-20 -top-20 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <!-- Map Section Header -->
+      <div class="flex flex-wrap items-center justify-between pb-4 border-b border-slate-800/80 gap-3">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 rounded-xl bg-sky-500/20 text-sky-400">
+            <i data-lucide="map" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-base font-bold text-white tracking-tight">Urban Live Map</h2>
+              <span id="mapStatusPill" class="px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span id="mapStatusText">Map Canvas Active</span>
+              </span>
+            </div>
+            <p id="mapLocationSubtitle" class="text-xs text-slate-400">Interactive Spatial Telemetry Canvas &bull; Live Telemetry</p>
+          </div>
+        </div>
+
+        <!-- Quick Controls: Center View, Fullscreen, and Collapsible Hide/Show -->
+        <div class="flex items-center flex-wrap gap-2">
+          <!-- Center on Location Button -->
+          <button id="mapResetBtn" title="Center map camera on active location" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-800 text-slate-300 border border-slate-700 hover:border-sky-500 hover:text-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+            <i data-lucide="locate-fixed" class="w-3.5 h-3.5 text-sky-400"></i>
+            <span id="mapResetText">Center on Location</span>
+          </button>
+
+          <!-- Fullscreen Toggle Button -->
+          <button id="mapFullscreenBtn" title="Toggle Fullscreen Map View" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-800 text-slate-300 border border-slate-700 hover:border-sky-500 hover:text-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+            <i id="mapFullscreenIcon" data-lucide="maximize" class="w-3.5 h-3.5 text-slate-400"></i>
+            <span id="mapFullscreenText">Fullscreen</span>
+          </button>
+
+          <!-- Collapsible Hide / Show Map Button -->
+          <button id="mapToggleVisibilityBtn" title="Collapse or Expand Map Section" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-dark-800 text-slate-300 border border-slate-700 hover:border-sky-500 hover:text-white transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+            <i id="mapToggleVisibilityIcon" data-lucide="chevron-up" class="w-3.5 h-3.5 text-sky-400"></i>
+            <span id="mapToggleVisibilityText">Hide Map</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Collapsible Map Body (Viewport + Toolbar + Footer) -->
+      <div id="urbanMapBody" class="space-y-4 transition-all duration-300">
+        <!-- Map Viewport Wrapper -->
+        <div class="relative w-full h-[380px] sm:h-[460px] lg:h-[500px] rounded-xl overflow-hidden border border-slate-800 bg-dark-950 shadow-inner">
+          <!-- Loading Skeleton Overlay -->
+          <div id="mapLoadingSkeleton" class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-dark-950/90 backdrop-blur-sm transition-opacity duration-300">
+            <div class="flex items-center gap-3 p-4 rounded-xl bg-dark-900 border border-slate-800 shadow-xl">
+              <i data-lucide="loader-2" class="w-5 h-5 text-sky-400 animate-spin"></i>
+              <span class="text-xs font-semibold text-slate-200">Loading Spatial Canvas...</span>
+            </div>
+          </div>
+
+          <!-- =============================================================== -->
+          <!-- TOP-LEFT CORNER MAP HUD: SELECTED DETAILS & LAYER FILTERS        -->
+          <!-- =============================================================== -->
+          <div id="urbanMapTopLeftHUD" class="absolute top-3 left-3 z-20 pointer-events-auto w-[275px] sm:w-[315px] max-w-[calc(100%-24px)] rounded-xl bg-dark-950/95 backdrop-blur-md border border-slate-700/80 shadow-2xl transition-all duration-300 select-none overflow-hidden text-slate-200">
+            <!-- HUD Header: Selected Location & Collapse Minimizer -->
+            <div class="px-3 py-2 bg-dark-900/95 border-b border-slate-800/90 flex items-center justify-between gap-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="relative flex h-2.5 w-2.5 flex-shrink-0">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+                <div class="min-w-0">
+                  <div id="hudLocationName" class="text-xs font-bold text-white truncate" title="Current Selected Location">Active Location</div>
+                  <div id="hudLocationSubtitle" class="text-[10px] text-slate-400 truncate">Detecting telemetry node...</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <span id="hudLocationBadge" class="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20 uppercase">
+                  LOC
+                </span>
+                <button
+                  type="button"
+                  id="hudToggleCollapseBtn"
+                  title="Collapse / Expand HUD panel"
+                  class="p-1 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <i id="hudToggleCollapseIcon" data-lucide="chevron-up" class="w-3.5 h-3.5 text-slate-300"></i>
+                </button>
+              </div>
+            </div>
+
+            <!-- Collapsible HUD Body (Details + Filters + Navigation) -->
+            <div id="hudCollapsibleBody" class="p-2.5 space-y-2.5 transition-all duration-300 max-h-[520px] opacity-100">
+              <!-- SECTION 1: Selected Location Telemetry Metrics (Filtered by Active Checkboxes) -->
+              <div id="hudTelemetryContainer" class="space-y-1.5">
+                <!-- 1. Live Weather Card (Shown ONLY when Weather filter is selected) -->
+                <div id="hudWeatherCard" title="Click to view weather details in upper dashboard" class="p-2 rounded-lg bg-dark-900/85 border border-slate-800/90 hover:border-sky-500/50 transition cursor-pointer flex items-center justify-between group">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <img id="hudWeatherIcon" src="https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0001_sunny.png" class="w-5 h-5 rounded flex-shrink-0" alt="Weather">
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-1">
+                        <span class="text-[10px] uppercase font-bold text-sky-400">Weather</span>
+                        <i data-lucide="arrow-up-right" class="w-2.5 h-2.5 text-slate-500 group-hover:text-sky-400 transition"></i>
+                      </div>
+                      <div id="hudWeatherCondition" class="text-xs font-semibold text-slate-200 truncate">Clear / Sunny</div>
+                    </div>
+                  </div>
+                  <div class="text-right flex-shrink-0">
+                    <div id="hudRainProb" class="text-xs font-bold font-mono text-cyan-400">20% Rain</div>
+                    <div class="text-[9px] text-slate-400">Precipitation</div>
+                  </div>
+                </div>
+
+                <!-- 2. Ambient Temperature / Thermal Card (Shown ONLY when Temperature filter is selected) -->
+                <div id="hudTemperatureCard" title="Click to view temperature analysis in upper dashboard" class="p-2 rounded-lg bg-dark-900/85 border border-slate-800/90 hover:border-rose-500/50 transition cursor-pointer flex items-center justify-between group">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <div class="p-1 rounded bg-rose-500/15 text-rose-400 flex-shrink-0">
+                      <i data-lucide="thermometer" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-1">
+                        <span class="text-[10px] uppercase font-bold text-rose-400">Temperature</span>
+                        <i data-lucide="arrow-up-right" class="w-2.5 h-2.5 text-slate-500 group-hover:text-rose-400 transition"></i>
+                      </div>
+                      <div id="hudThermalZone" class="text-[11px] font-semibold text-emerald-400 truncate">Comfort Zone</div>
+                    </div>
+                  </div>
+                  <div class="text-right flex-shrink-0">
+                    <div id="hudTemperature" class="text-sm font-extrabold font-mono text-white">28.0 °C</div>
+                    <div class="text-[9px] text-slate-400">Ambient Reading</div>
+                  </div>
+                </div>
+
+                <!-- 3. Traffic Mobility Card (Shown ONLY when Traffic filter is selected) -->
+                <div id="hudTrafficCard" title="Click to view traffic & mobility details in upper dashboard" class="p-2 rounded-lg bg-dark-900/85 border border-slate-800/90 hover:border-amber-500/50 transition cursor-pointer flex items-center justify-between group">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <div class="p-1 rounded bg-amber-500/15 text-amber-400 flex-shrink-0">
+                      <i data-lucide="car" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-1">
+                        <span class="text-[10px] uppercase font-bold text-amber-400">Urban Traffic</span>
+                        <i data-lucide="arrow-up-right" class="w-2.5 h-2.5 text-slate-500 group-hover:text-amber-400 transition"></i>
+                      </div>
+                      <span id="hudTrafficStatus" class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400">Smooth</span>
+                    </div>
+                  </div>
+                  <div class="text-right flex-shrink-0">
+                    <div id="hudTrafficSpeed" class="text-xs font-bold font-mono text-sky-400">35 km/h</div>
+                    <div id="hudTrafficCongestion" class="text-[9px] font-mono text-amber-400">30% Congestion</div>
+                  </div>
+                </div>
+
+                <!-- 4. Air Quality Card (Shown ONLY when Air Quality filter is selected) -->
+                <div id="hudAirQualityCard" title="Click to view air quality details in upper dashboard" class="p-2 rounded-lg bg-dark-900/85 border border-slate-800/90 hover:border-emerald-500/50 transition cursor-pointer flex items-center justify-between group">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <div class="p-1 rounded bg-emerald-500/15 text-emerald-400 flex-shrink-0">
+                      <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+                    </div>
+                    <div class="min-w-0">
+                      <div class="flex items-center gap-1">
+                        <span class="text-[10px] uppercase font-bold text-emerald-400">Air Quality</span>
+                        <i data-lucide="arrow-up-right" class="w-2.5 h-2.5 text-slate-500 group-hover:text-emerald-400 transition"></i>
+                      </div>
+                      <span id="hudAqiStatus" class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400">Safe</span>
+                    </div>
+                  </div>
+                  <div class="text-right flex-shrink-0">
+                    <div id="hudAqiVal" class="text-xs font-bold font-mono text-white">AQI 42</div>
+                    <div id="hudPm25Val" class="text-[9px] font-mono text-slate-400">PM2.5: 18 µg</div>
+                  </div>
+                </div>
+
+                <!-- No Filters Selected Notice (Shown when all checkboxes are off) -->
+                <div id="hudNoFiltersMsg" class="hidden p-3 text-center rounded-lg bg-dark-900/60 border border-slate-800 text-[11px] text-slate-400">
+                  <i data-lucide="filter" class="w-4 h-4 mx-auto mb-1 text-slate-500"></i>
+                  <span>No layer filters selected. Check layers below to view live telemetry.</span>
+                </div>
+              </div>
+
+              <!-- Sleek Divider -->
+              <div class="border-t border-slate-800/80"></div>
+
+              <!-- SECTION 2: Map Layer Filters -->
+              <div class="space-y-1.5">
+                <div class="flex items-center justify-between">
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                    <i data-lucide="layers" class="w-3 h-3 text-sky-400"></i>
+                    <span>Map Layer Filters</span>
+                  </span>
+                  <span class="text-[9px] font-mono text-slate-500">Live Overlays</span>
+                </div>
+
+                <div class="grid grid-cols-2 gap-1.5">
+                  <!-- Weather Filter Toggle -->
+                  <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-dark-900/90 border border-slate-700/70 text-xs font-semibold text-slate-300 hover:border-sky-500/60 cursor-pointer transition select-none">
+                    <input type="checkbox" id="layerToggleWeather" checked class="w-3.5 h-3.5 rounded border-slate-700 bg-dark-800 text-sky-500 focus:ring-0 focus:ring-offset-0">
+                    <i data-lucide="cloud-sun" class="w-3 h-3 text-sky-400 flex-shrink-0"></i>
+                    <span class="text-[11px] truncate">Weather</span>
+                  </label>
+
+                  <!-- Temperature Filter Toggle -->
+                  <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-dark-900/90 border border-slate-700/70 text-xs font-semibold text-slate-300 hover:border-rose-500/60 cursor-pointer transition select-none">
+                    <input type="checkbox" id="layerToggleTemperature" checked class="w-3.5 h-3.5 rounded border-slate-700 bg-dark-800 text-rose-500 focus:ring-0 focus:ring-offset-0">
+                    <i data-lucide="thermometer" class="w-3 h-3 text-rose-400 flex-shrink-0"></i>
+                    <span class="text-[11px] truncate">Thermal</span>
+                  </label>
+
+                  <!-- Traffic Corridors Filter Toggle -->
+                  <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-dark-900/90 border border-slate-700/70 text-xs font-semibold text-slate-300 hover:border-amber-500/60 cursor-pointer transition select-none">
+                    <input type="checkbox" id="layerToggleTraffic" checked class="w-3.5 h-3.5 rounded border-slate-700 bg-dark-800 text-amber-500 focus:ring-0 focus:ring-offset-0">
+                    <i data-lucide="car" class="w-3 h-3 text-amber-400 flex-shrink-0"></i>
+                    <span class="text-[11px] truncate">Traffic</span>
+                  </label>
+
+                  <!-- Air Quality Filter Toggle -->
+                  <label class="flex items-center gap-1.5 p-1.5 rounded-lg bg-dark-900/90 border border-slate-700/70 text-xs font-semibold text-slate-300 hover:border-emerald-500/60 cursor-pointer transition select-none">
+                    <input type="checkbox" id="layerToggleAirQuality" checked class="w-3.5 h-3.5 rounded border-slate-700 bg-dark-800 text-emerald-500 focus:ring-0 focus:ring-offset-0">
+                    <i data-lucide="shield-alert" class="w-3 h-3 text-emerald-400 flex-shrink-0"></i>
+                    <span class="text-[11px] truncate">Air Quality</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- SECTION 3: Link to Upper 3 Boxes Interface for More Details -->
+              <button
+                type="button"
+                id="hudGoToTopDashboardBtn"
+                class="w-full py-1.5 px-2.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-sky-500/20 via-blue-500/15 to-indigo-500/20 border border-sky-500/30 text-sky-300 hover:text-white hover:border-sky-400 hover:from-sky-500/30 hover:to-indigo-500/30 transition flex items-center justify-between group shadow-sm cursor-pointer"
+              >
+                <span class="flex items-center gap-1.5">
+                  <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-sky-400"></i>
+                  <span>View More Details in Upper Dashboard</span>
+                </span>
+                <i data-lucide="arrow-up-right" class="w-3.5 h-3.5 text-sky-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- MapLibre GL Target Container -->
+          <div id="urbanMapCanvas" class="w-full h-full"></div>
+        </div>
+
+        <!-- Map Footer & Metadata Bar -->
+        <div class="pt-1 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span>Engine: <b class="text-slate-300 font-mono">MapLibre GL</b></span>
+            <span>&bull;</span>
+            <span>Tiles: <b class="text-slate-300">OpenStreetMap (100% Free &amp; Keyless)</b></span>
+          </div>
+          <div class="flex items-center gap-2 font-mono text-[11px] text-slate-400">
+            <span class="h-1.5 w-1.5 rounded-full bg-sky-400"></span>
+            <span id="mapCenterCoordText">Center: Live Coordinates</span>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- ========================================================================= -->
     <!-- BOX 3: VISUALIZED ENVIRONMENTAL & MICROCLIMATE TELEMETRY ANALYSIS         -->
@@ -568,7 +1021,7 @@
           </div>
           <div>
             <h2 class="text-base font-bold text-white tracking-tight">Environmental &amp; Microclimate Telemetry Analysis</h2>
-            <p class="text-xs text-slate-400">In-Depth Weather Telemetry &bull; Urban Climate Insights &bull; Anand, Gujarat, India</p>
+            <p id="analysisLocationSubtitle" class="text-xs text-slate-400">In-Depth Weather Telemetry &bull; Urban Climate Insights</p>
           </div>
         </div>
         <span class="px-3 py-1 rounded-full text-xs font-semibold bg-violet-500/10 text-violet-400 border border-violet-500/20 flex items-center gap-1.5">
@@ -651,7 +1104,7 @@
           <!-- Advisory takeaway -->
           <div class="p-3 rounded-lg bg-dark-900/70 border border-slate-800/80 text-[11px] text-slate-300 flex items-start gap-2">
             <i data-lucide="info" class="w-4 h-4 text-sky-400 shrink-0 mt-0.5"></i>
-            <span>Ambient reading is sourced live from Anand weather telemetry. Low sweat evaporation load with mild humidity interaction.</span>
+            <span>Ambient reading is sourced live from meteorological telemetry. Low sweat evaporation load with mild humidity interaction.</span>
           </div>
         </div>
 
@@ -766,61 +1219,118 @@
               <span class="inline-block w-3 h-0.5 bg-red-500 border border-red-500 border-dashed"></span>
               <span>Dashed red line represents national ambient 24-hr safety threshold (NAAQS).</span>
             </div>
-            <span class="font-mono text-sky-400">Anand Air Station</span>
+            <span id="analysisAirStationTag" class="font-mono text-sky-400">Live Air Station</span>
           </div>
         </div>
 
-        <!-- PANEL: Atmospheric Dispersion & Urban Environmental Scorecard (5 cols) -->
-        <div class="lg:col-span-5 p-5 rounded-xl bg-dark-950/80 border border-slate-800/90 flex flex-col justify-between space-y-4">
-          
-          <!-- Urban Score Header -->
+        <!-- PANEL: Urban Environmental Scorecard — Visual Metrics (5 cols) -->
+        <div class="lg:col-span-5 p-5 rounded-xl bg-dark-950/80 border border-slate-800/90 flex flex-col justify-between space-y-3">
+
+          <!-- Header -->
           <div class="flex items-center justify-between pb-3 border-b border-slate-800/70">
             <div class="flex items-center gap-2">
               <i data-lucide="award" class="w-4 h-4 text-emerald-400"></i>
               <span class="text-xs font-bold text-white uppercase tracking-wider">Urban Environmental Score</span>
             </div>
-            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Optimal Grade A</span>
+            <span id="urbanScoreGradeBadge" class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Optimal Grade A</span>
           </div>
 
-          <!-- Score Value & Bar -->
-          <div class="text-center py-1">
-            <div class="text-4xl font-extrabold text-white font-mono tracking-tight">
-              94 <span class="text-base text-slate-400 font-normal">/ 100</span>
-            </div>
-            <div class="text-xs text-emerald-400 font-semibold mt-1">Excellent Urban Habitability Index</div>
-
-            <!-- Glowing progress bar -->
-            <div class="w-full bg-dark-800 rounded-full h-2.5 overflow-hidden border border-slate-800 mt-3">
-              <div class="bg-gradient-to-r from-teal-400 via-emerald-400 to-sky-400 h-full rounded-full shadow-lg shadow-emerald-500/50" style="width: 94%"></div>
-            </div>
-          </div>
-
-          <!-- Dispersion & Barometer Diagnostics -->
-          <div class="space-y-2.5 text-xs">
-            <div class="p-3 rounded-lg bg-dark-900/80 border border-slate-800/80">
-              <div class="text-[10px] uppercase font-semibold text-slate-400 flex items-center gap-1.5 mb-1">
-                <i data-lucide="wind" class="w-3.5 h-3.5 text-teal-400"></i>
-                Atmospheric Airflow Dispersion
+          <!-- Score Ring + Label -->
+          <div class="flex items-center gap-4">
+            <!-- SVG Radial Ring -->
+            <div class="relative shrink-0 w-20 h-20">
+              <svg viewBox="0 0 80 80" class="w-full h-full -rotate-90">
+                <circle cx="40" cy="40" r="32" fill="none" stroke="#1e293b" stroke-width="8"/>
+                <circle id="urbanScoreRing" cx="40" cy="40" r="32" fill="none"
+                  stroke="url(#urbanScoreGrad)" stroke-width="8"
+                  stroke-linecap="round"
+                  stroke-dasharray="201.06"
+                  stroke-dashoffset="12.06"
+                  class="transition-all duration-700"/>
+                <defs>
+                  <linearGradient id="urbanScoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#2dd4bf"/>
+                    <stop offset="50%" stop-color="#34d399"/>
+                    <stop offset="100%" stop-color="#38bdf8"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span id="urbanScoreValue" class="text-xl font-extrabold text-white font-mono leading-none">94</span>
+                <span class="text-[9px] text-slate-400 font-mono">/100</span>
               </div>
-              <p id="analysisDispersion" class="text-[11px] text-slate-300 leading-relaxed">
-                Active Dispersion: Steady 16 km/h westerly airflow effectively ventilates Anand, mitigating ground-level pollutant accumulation.
-              </p>
             </div>
 
-            <div class="p-3 rounded-lg bg-dark-900/80 border border-slate-800/80">
-              <div class="text-[10px] uppercase font-semibold text-slate-400 flex items-center gap-1.5 mb-1">
-                <i data-lucide="gauge" class="w-3.5 h-3.5 text-sky-400"></i>
-                Barometric Pressure Diagnostic
+            <!-- Label + Bar -->
+            <div class="flex-1 min-w-0">
+              <div id="urbanScoreLabel" class="text-sm font-bold text-emerald-400 mb-1">Excellent Habitability</div>
+              <div class="w-full bg-dark-800 rounded-full h-2 overflow-hidden border border-slate-800">
+                <div id="urbanScoreBar" class="bg-gradient-to-r from-teal-400 via-emerald-400 to-sky-400 h-full rounded-full shadow-md transition-all duration-700" style="width:94%"></div>
               </div>
-              <p id="analysisBaroStatus" class="text-[11px] text-slate-300 leading-relaxed">
-                Stable Barometric Ridge (1011 hPa): Indicates steady weather conditions with low probability of storm formation.
-              </p>
+              <div id="urbanScoreSubtext" class="text-[10px] text-slate-400 mt-1 font-mono">AQI · Wind · Pressure composite</div>
             </div>
           </div>
 
-          <div class="flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-slate-800">
-            <span>Outdoor Activities: <b class="text-emerald-400">Recommended</b></span>
-            <span>Respiratory Risk: <b class="text-emerald-400">Minimal</b></span>
+          <!-- 3 Visual Metric Rows -->
+          <div class="space-y-2">
+
+            <!-- AQI Quality Row -->
+            <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800/80">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-1.5 text-[10px] uppercase font-semibold text-slate-400">
+                  <i data-lucide="leaf" class="w-3 h-3 text-emerald-400"></i>
+                  Air Quality Index
+                </div>
+                <span id="urbanAqiChip" class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Good</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="flex-1 bg-dark-800 rounded-full h-1.5 overflow-hidden border border-slate-700">
+                  <div id="urbanAqiBar" class="h-full rounded-full transition-all duration-700 bg-gradient-to-r from-emerald-400 to-teal-400" style="width:43%"></div>
+                </div>
+                <span id="urbanAqiVal" class="text-[11px] font-mono font-bold text-white w-8 text-right">43</span>
+              </div>
+            </div>
+
+            <!-- Airflow Dispersion Row -->
+            <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800/80">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-1.5 text-[10px] uppercase font-semibold text-slate-400">
+                  <i data-lucide="wind" class="w-3 h-3 text-teal-400"></i>
+                  Airflow Dispersion
+                </div>
+                <span id="urbanWindChip" class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 border border-teal-500/20">Active</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="flex-1 bg-dark-800 rounded-full h-1.5 overflow-hidden border border-slate-700">
+                  <div id="urbanWindBar" class="h-full rounded-full transition-all duration-700 bg-gradient-to-r from-teal-400 to-sky-400" style="width:32%"></div>
+                </div>
+                <span id="urbanWindVal" class="text-[11px] font-mono font-bold text-white w-12 text-right">16 km/h</span>
+              </div>
+            </div>
+
+            <!-- Barometric Stability Row -->
+            <div class="p-2.5 rounded-lg bg-dark-900/80 border border-slate-800/80">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-1.5 text-[10px] uppercase font-semibold text-slate-400">
+                  <i data-lucide="gauge" class="w-3 h-3 text-sky-400"></i>
+                  Barometric Stability
+                </div>
+                <span id="urbanBaroChip" class="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">Stable</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="flex-1 bg-dark-800 rounded-full h-1.5 overflow-hidden border border-slate-700">
+                  <div id="urbanBaroBar" class="h-full rounded-full transition-all duration-700 bg-gradient-to-r from-sky-400 to-indigo-400" style="width:75%"></div>
+                </div>
+                <span id="urbanBaroVal" class="text-[11px] font-mono font-bold text-white w-14 text-right">1011 hPa</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Footer row -->
+          <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-800">
+            <span>Outdoor Activities: <b id="urbanOutdoorRec" class="text-emerald-400">Recommended</b></span>
+            <span>Respiratory Risk: <b id="urbanRespRisk" class="text-emerald-400">Minimal</b></span>
           </div>
         </div>
 
@@ -833,9 +1343,9 @@
             <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
             Active Station:
           </span>
-          <span class="text-slate-200 font-medium">Anand, Gujarat, India</span>
+          <span id="analysisStationLocation" class="text-slate-200 font-medium">Live Telemetry Node</span>
           <span class="text-slate-500">|</span>
-          <span class="text-slate-400">All temperature values &amp; Dew Point update dynamically with the <b class="text-sky-400 font-mono">°C / °F</b> switch</span>
+          <span class="text-slate-400">All temperature values &amp; Dew Point update dynamically with the <b class="text-sky-400 font-mono">°C / °F</b> toggle</span>
         </div>
         <div class="flex items-center gap-4 text-slate-400 font-mono text-[11px]">
           <span class="text-emerald-400">&bull; Live Synchronized Every 10s</span>
@@ -848,17 +1358,69 @@
   <!-- ================= FOOTER ================= -->
   <footer class="mt-auto border-t border-slate-800/80 bg-dark-900/50 px-6 py-4 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-3">
     <div>
-      Smart City Environmental Station &bull; Anand, Gujarat, India
+      <span id="footerLocationName">Smart City Environmental &amp; Mobility Telemetry Platform</span>
     </div>
     <div class="flex items-center gap-4">
       <span>Auto-Poll: <b class="text-emerald-400 font-mono">Every 10s</b></span>
-      <span>&bull;</span>
-      <a href="iot-dashboard.html" class="text-sky-400 hover:text-sky-300 underline font-medium">Switch to IoT Sensor Command Center &rarr;</a>
     </div>
   </footer>
 
+  <style>
+    /* Instant Light Mode through CSS Inversion */
+    html.light-theme {
+      filter: invert(1) hue-rotate(180deg) contrast(1.15) saturate(1.1);
+      background-color: #f8fafc;
+    }
+    
+    /* Revert map, images, and canvas to preserve their native colors */
+    html.light-theme .maplibregl-map,
+    html.light-theme img,
+    html.light-theme canvas {
+      filter: invert(1) hue-rotate(180deg) contrast(0.85); /* counteract the parent contrast */
+    }
+
+    /* Force text to be darker in light mode by providing a very light source color before inversion */
+    html.light-theme .text-slate-400,
+    html.light-theme .text-slate-500 {
+      color: #e2e8f0 !important; 
+    }
+    html.light-theme .text-slate-300 {
+      color: #f8fafc !important;
+    }
+  </style>
+
   <!-- Controller Script -->
   <script type="module" src="js/weather-dashboard.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const btn = document.getElementById("themeToggleBtn");
+      const icon = document.getElementById("themeIcon");
+      
+      const applyTheme = (isLight) => {
+        if (isLight) {
+          document.documentElement.classList.add("light-theme");
+          icon.setAttribute("data-lucide", "moon");
+        } else {
+          document.documentElement.classList.remove("light-theme");
+          icon.setAttribute("data-lucide", "sun");
+        }
+        lucide.createIcons();
+      };
+      
+      // Load saved theme
+      const savedTheme = localStorage.getItem("smartcity_theme");
+      const prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+      let isLight = savedTheme === "light" || (!savedTheme && prefersLight);
+      
+      applyTheme(isLight);
+      
+      btn.addEventListener("click", () => {
+        isLight = !isLight;
+        localStorage.setItem("smartcity_theme", isLight ? "light" : "dark");
+        applyTheme(isLight);
+      });
+    });
+  </script>
   <script>
     lucide.createIcons();
   </script>

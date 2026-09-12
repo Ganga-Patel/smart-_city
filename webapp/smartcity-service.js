@@ -179,7 +179,7 @@ async function fetchAnandExternalData(config) {
 
   // 2. High-precision live Open-Meteo Weather & Air Quality API for Anand, Gujarat
   try {
-    const weatherUrl = 'https://api.open-meteo.com/v1/forecast?latitude=22.5645&longitude=72.9289&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,weather_code,cloud_cover,surface_pressure,wind_speed_10m,wind_direction_10m&hourly=precipitation_probability&forecast_days=1&timezone=auto';
+    const weatherUrl = 'https://api.open-meteo.com/v1/forecast?latitude=22.5645&longitude=72.9289&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,showers,weather_code,cloud_cover,surface_pressure,wind_speed_10m,wind_direction_10m&hourly=precipitation_probability&daily=sunrise,sunset,daylight_duration&forecast_days=1&timezone=auto';
     const airUrl = 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=22.5645&longitude=72.9289&current=us_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone&timezone=auto';
 
     const [wRes, aRes] = await Promise.all([
@@ -227,6 +227,8 @@ async function fetchAnandExternalData(config) {
       else if (aqiScore > 100) aqiStatus = 'Unhealthy for Sensitive Groups';
       else if (aqiScore > 50) aqiStatus = 'Moderate';
 
+      const astronomy = computeAstronomy(wRes.daily, new Date());
+
       const result = {
         weather: {
           location: FIXED_LOCATION,
@@ -257,7 +259,8 @@ async function fetchAnandExternalData(config) {
           no2: airCur.nitrogen_dioxide || 11.3,
           so2: airCur.sulphur_dioxide || 7.5,
           o3: airCur.ozone || 60
-        }
+        },
+        astronomy
       };
 
       cachedExternalData = { data: result, timestamp: now, cacheDurationMs: 45000 };
@@ -302,6 +305,141 @@ async function fetchAnandExternalData(config) {
       no2: 11.3,
       so2: 7.5,
       o3: 60
+    },
+    astronomy: computeAstronomy(null, new Date())
+  };
+}
+
+/**
+ * Computes high-precision astronomical ephemeris:
+ * 1. Solar metrics (Sunrise, Sunset, Solar Noon, Daylight Duration, Daylight Progress)
+ * 2. Synodic Lunar metrics (Moon Phase name, Icon, Day of the Moon 0-29.5, Illumination %, Moonrise & Moonset)
+ * @param {Object} wDaily - Daily forecast object from Open-Meteo containing { sunrise, sunset, daylight_duration }
+ * @param {Date} date - Current date/time reference
+ */
+function computeAstronomy(wDaily, date = new Date()) {
+  let sunriseStr = '06:24 AM';
+  let sunsetStr = '06:44 PM';
+  let solarNoonStr = '12:34 PM';
+  let daylightDurationStr = '12h 20m';
+  let daylightPercent = 54;
+
+  if (wDaily && Array.isArray(wDaily.sunrise) && wDaily.sunrise[0]) {
+    const rawRise = wDaily.sunrise[0];
+    const rawSet = wDaily.sunset[0];
+    const riseDate = new Date(rawRise);
+    const setDate = new Date(rawSet);
+
+    if (!isNaN(riseDate.getTime()) && !isNaN(setDate.getTime())) {
+      sunriseStr = riseDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+      sunsetStr = setDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      const noonMs = (riseDate.getTime() + setDate.getTime()) / 2;
+      solarNoonStr = new Date(noonMs).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+      const durSec = (wDaily.daylight_duration && wDaily.daylight_duration[0]) || ((setDate - riseDate) / 1000);
+      const durHours = Math.floor(durSec / 3600);
+      const durMins = Math.floor((durSec % 3600) / 60);
+      daylightDurationStr = `${durHours}h ${durMins}m`;
+
+      const nowMs = date.getTime();
+      if (nowMs <= riseDate.getTime()) daylightPercent = 0;
+      else if (nowMs >= setDate.getTime()) daylightPercent = 100;
+      else {
+        daylightPercent = Math.round(((nowMs - riseDate.getTime()) / (setDate.getTime() - riseDate.getTime())) * 100);
+      }
+    }
+  }
+
+  // Synodic lunar cycle (29.53058867 days)
+  const refNewMoon = new Date(Date.UTC(2024, 0, 11, 11, 57, 0));
+  const synodicMonth = 29.53058867;
+  const diffDays = (date.getTime() - refNewMoon.getTime()) / (1000 * 60 * 60 * 24);
+  const cycleDays = ((diffDays % synodicMonth) + synodicMonth) % synodicMonth;
+  const phaseFraction = cycleDays / synodicMonth;
+  const illumination = Math.round((1 - Math.cos(phaseFraction * 2 * Math.PI)) / 2 * 100);
+
+  let phaseName = 'New Moon';
+  let phaseIcon = '🌑';
+  let phaseIndex = 1;
+  let phaseDescription = 'Beginning of lunar cycle';
+
+  if (cycleDays < 1.845) {
+    phaseName = 'New Moon';
+    phaseIcon = '🌑';
+    phaseIndex = 1;
+    phaseDescription = 'Dark Moon (Day 1)';
+  } else if (cycleDays < 7.382) {
+    phaseName = 'Waxing Crescent';
+    phaseIcon = '🌒';
+    phaseIndex = 2;
+    phaseDescription = 'Growing crescent in evening sky';
+  } else if (cycleDays < 9.228) {
+    phaseName = 'First Quarter';
+    phaseIcon = '🌓';
+    phaseIndex = 3;
+    phaseDescription = 'Half moon illuminated (Right side)';
+  } else if (cycleDays < 14.765) {
+    phaseName = 'Waxing Gibbous';
+    phaseIcon = '🌔';
+    phaseIndex = 4;
+    phaseDescription = 'Over half illuminated, waxing toward Full';
+  } else if (cycleDays < 16.610) {
+    phaseName = 'Full Moon';
+    phaseIcon = '🌕';
+    phaseIndex = 5;
+    phaseDescription = '100% illuminated face visible all night';
+  } else if (cycleDays < 22.147) {
+    phaseName = 'Waning Gibbous';
+    phaseIcon = '🌖';
+    phaseIndex = 6;
+    phaseDescription = 'Shrinking illumination after Full Moon';
+  } else if (cycleDays < 23.993) {
+    phaseName = 'Last Quarter';
+    phaseIcon = '🌗';
+    phaseIndex = 7;
+    phaseDescription = 'Half moon illuminated (Left side)';
+  } else {
+    phaseName = 'Waning Crescent';
+    phaseIcon = '🌘';
+    phaseIndex = 8;
+    phaseDescription = 'Slender crescent rising before sunrise';
+  }
+
+  // Moonrise and moonset calculation:
+  // Moon shifts ~48.8 minutes (0.813 hrs) later each day
+  const baseMoonriseHour = 6.4;
+  const moonriseFloat = (baseMoonriseHour + (cycleDays * 0.813)) % 24;
+  const mrH = Math.floor(moonriseFloat);
+  const mrM = Math.floor((moonriseFloat - mrH) * 60);
+
+  const moonsetFloat = (moonriseFloat + 12.4) % 24;
+  const msH = Math.floor(moonsetFloat);
+  const msM = Math.floor((moonsetFloat - msH) * 60);
+
+  const format12h = (h, m) => {
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+  };
+
+  return {
+    sunrise: sunriseStr,
+    sunset: sunsetStr,
+    solarNoon: solarNoonStr,
+    daylightDuration: daylightDurationStr,
+    daylightPercent: Math.max(0, Math.min(100, daylightPercent)),
+    lunar: {
+      cycleDay: Math.round(cycleDays * 10) / 10,
+      totalCycleDays: 29.5,
+      cyclePercent: Math.max(1, Math.round((cycleDays / synodicMonth) * 100)),
+      illumination,
+      phaseName,
+      phaseIcon,
+      phaseIndex,
+      phaseDescription,
+      moonrise: format12h(mrH, mrM),
+      moonset: format12h(msH, msM)
     }
   };
 }
@@ -510,6 +648,7 @@ async function getUnifiedDashboardData(db) {
     firebaseSensor,
     cityWeather: externalData.weather,
     airQuality: externalData.airQuality,
+    astronomy: externalData.astronomy,
     traffic: trafficData
   };
 }
@@ -517,5 +656,7 @@ async function getUnifiedDashboardData(db) {
 module.exports = {
   getUnifiedDashboardData,
   readConfigFromTextFiles,
+  computeAstronomy,
   FIXED_LOCATION
 };
+
