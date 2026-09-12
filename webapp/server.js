@@ -636,3 +636,5 @@ app.listen(PORT, () => {
   console.log(`📁 Serving assets from: ${path.join(__dirname, 'public')}`);
   console.log(`====================================================`);
 });
+
+module.exports = app;

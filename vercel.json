@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "webapp/server.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "webapp/public/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/webapp/server.js"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/webapp/public/$1"
+    }
+  ]
+}
