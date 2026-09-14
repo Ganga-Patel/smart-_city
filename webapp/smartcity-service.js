@@ -216,6 +216,12 @@ async function fetchAnandExternalData(config) {
         icon = 'https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0024_thunderstorms.png';
       }
 
+      // Force rain condition if there is active precipitation but the weather_code failed to report it
+      if (precipMm > 0 && cur.weather_code < 51) {
+        condition = 'Active Rain';
+        icon = 'https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0017_cloudy_with_light_rain.png';
+      }
+
       const deg = cur.wind_direction_10m || 270;
       const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
       const windDir = dirs[Math.round(deg / 22.5) % 16] || 'W';

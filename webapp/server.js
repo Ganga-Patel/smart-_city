@@ -349,6 +349,13 @@ app.get('/api/location/weather', async (req, res) => {
     const pressure = Math.round(cur.surface_pressure ?? 1010);
     const rainProb = precip > 0 ? 90 : (cur.weather_code >= 51 ? 65 : 20);
 
+    let finalCondition = wmo.condition;
+    let finalIcon = wmo.icon;
+    if (precip > 0 && cur.weather_code < 51) {
+      finalCondition = 'Active Rain';
+      finalIcon = 'https://cdn.worldweatheronline.com/images/wsymbols01_png_64/wsymbol_0017_cloudy_with_light_rain.png';
+    }
+
     // 1. Weather Telemetry Payload
     const weatherPayload = {
       temperature: temp,
@@ -357,8 +364,8 @@ app.get('/api/location/weather', async (req, res) => {
       dewPoint: dewPoint,
       minTemp: temp - 4,
       maxTemp: temp + 5,
-      condition: wmo.condition,
-      icon: wmo.icon,
+      condition: finalCondition,
+      icon: finalIcon,
       humidity: humidity,
       windSpeed: windSpeed,
       windDegree: windDeg,
