@@ -4,9 +4,22 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smart City IoT Command Center</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/logo/logo-dark-hd.png">
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .brand-logo-img {
+      background-image: url('/logo/logo-dark-hd.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: left center;
+      width: 140px;
+      height: 40px;
+    }
+  </style>
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -46,15 +59,11 @@
     
     <!-- Brand / Title -->
     <div class="flex items-center gap-3.5">
-      <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-sky-500 to-emerald-400 p-0.5 shadow-lg shadow-sky-500/20 flex items-center justify-center">
-        <div class="h-full w-full bg-dark-950 rounded-[10px] flex items-center justify-center">
-          <i data-lucide="building-2" class="w-5 h-5 text-sky-400"></i>
-        </div>
-      </div>
+      <div class="brand-logo-img"></div>
       <div>
         <div class="flex items-center gap-2">
-          <h1 class="text-base font-bold tracking-tight text-white">Smart City IoT</h1>
-          <span class="px-2 py-0.5 text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-full">v1.0</span>
+          <!-- Small badge for context if needed, otherwise empty -->
+          <span class="px-2 py-0.5 text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-full">v1.0 (IoT)</span>
         </div>
         <p class="text-xs text-slate-400 font-medium">Urban Telemetry &amp; Hazard Command Center</p>
       </div>
