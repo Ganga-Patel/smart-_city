@@ -12,15 +12,21 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     .brand-logo-img {
-      background-image: url('/logo/logo-icon-dark.png');
+      background-image: url('/logo/logo-dark-square.png');
       background-size: contain;
       background-repeat: no-repeat;
       background-position: center;
-      width: 46px;
-      height: 46px;
-      border-radius: 10px;
+      width: 56px;
+      height: 56px;
+      border-radius: 12px;
       background-color: rgba(14, 165, 233, 0.1);
       border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+    html.light-theme .brand-logo-img {
+      background-image: url('/logo/logo-light-square.png');
+      background-color: rgba(14, 165, 233, 0.05);
+      border-color: rgba(56, 189, 248, 0.3);
+      filter: none;
     }
   </style>
   <script>
@@ -65,7 +71,7 @@
       <div class="brand-logo-img"></div>
       <div>
         <div class="flex items-center gap-2">
-          <h1 class="text-base font-bold tracking-tight text-white">Smart City IoT</h1>
+          <h1 class="text-base font-bold tracking-tight text-white">IoT Command Center</h1>
           <!-- Small badge for context if needed, otherwise empty -->
           <span class="px-2 py-0.5 text-[10px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-full">v1.0 (IoT)</span>
         </div>
