@@ -1,13 +1,17 @@
 import React from 'react';
-import { ScrollView, View, StyleSheet, RefreshControl } from 'react-native';
+import { ScrollView, View, Text, StyleSheet, RefreshControl } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import SensorCard from '../components/SensorCard';
 import SecurityMatrix from '../components/SecurityMatrix';
 import WaterQualityCard from '../components/WaterQualityCard';
 import WeatherCard from '../components/WeatherCard';
+import AirQualityCard from '../components/AirQualityCard';
+import TrafficCard from '../components/TrafficCard';
 import ClimateChart from '../components/ClimateChart';
 import EventLogStream from '../components/EventLogStream';
 import HazardBanner from '../components/HazardBanner';
 import { SensorIcons } from '../constants/Icons';
+import { Colors } from '../constants/Colors';
 
 export default function DashboardScreen({
   telemetry,
@@ -55,6 +59,16 @@ export default function DashboardScreen({
       {/* Active Hazard Banner */}
       <HazardBanner alert={activeAlert} onAcknowledge={onAcknowledgeAlert} />
 
+      {/* Location & Synchronized Feed Header Pill */}
+      <View style={styles.locationPillRow}>
+        <View style={styles.locationPill}>
+          <MaterialCommunityIcons name="map-marker-radius" size={14} color="#38bdf8" />
+          <Text style={styles.locationText}>{telemetry.location || 'Anand, Gujarat, India'}</Text>
+          <View style={styles.syncDot} />
+          <Text style={styles.syncText}>WebApp & Vercel Sync</Text>
+        </View>
+      </View>
+
       {/* Row 1: Primary Metrics Grid (2 Columns) */}
       <View style={styles.gridRow}>
         {/* Temperature */}
@@ -68,7 +82,7 @@ export default function DashboardScreen({
           statusText={tempStatus.text}
           statusType={tempStatus.type}
           progressPercent={(telemetry.temperature / 50) * 100}
-          subInfo="Min: 22°C • Max: 34°C"
+          subInfo="Physical DHT22 Sensor"
         />
 
         {/* Humidity */}
@@ -82,7 +96,7 @@ export default function DashboardScreen({
           statusText={humStatus.text}
           statusType={humStatus.type}
           progressPercent={telemetry.humidity}
-          subInfo="Target: 40-60% RH"
+          subInfo="Physical DHT22 Sensor"
         />
       </View>
 
@@ -98,7 +112,7 @@ export default function DashboardScreen({
           iconBgColor={isRaining ? SensorIcons.rainWet.bgColor : SensorIcons.rainDry.bgColor}
           statusText={isRaining ? 'PRECIPITATION' : 'DRY'}
           statusType={isRaining ? 'info' : 'success'}
-          subInfo={`Raw Sensor DO: ${telemetry.rainRaw ?? 1}`}
+          subInfo={`Hardware DO: ${telemetry.rainRaw ?? 1}`}
         />
 
         {/* Gas & Air Quality */}
@@ -112,12 +126,27 @@ export default function DashboardScreen({
           statusText={gasStatus.text}
           statusType={gasStatus.type}
           progressPercent={(gasVal / 600) * 100}
-          subInfo="MQ-2 / MQ-135 Sensor"
+          subInfo="Hardware MQ-2 Sensor"
         />
       </View>
 
       {/* Real-time Climate Timeline Chart */}
       <ClimateChart history={history} />
+
+      {/* Live Anand City Weather (Synchronized with WebApp / Vercel Box 1) */}
+      <View style={styles.sectionPadding}>
+        <WeatherCard cityWeather={telemetry.cityWeather} weather={telemetry.weather} />
+      </View>
+
+      {/* Live Anand Air Quality (Synchronized with WebApp / Vercel Box 2) */}
+      <View style={styles.sectionPadding}>
+        <AirQualityCard airQuality={telemetry.airQuality} />
+      </View>
+
+      {/* Live Anand Urban Traffic & Corridors (Synchronized with WebApp / Vercel Box 3) */}
+      <View style={styles.sectionPadding}>
+        <TrafficCard traffic={telemetry.traffic} />
+      </View>
 
       {/* Security & Surveillance Matrix */}
       <SecurityMatrix 
@@ -126,9 +155,8 @@ export default function DashboardScreen({
         reedLocked={telemetry.reedLocked} 
       />
 
-      {/* Expansion Stations */}
+      {/* Auxiliary Water Quality Station */}
       <WaterQualityCard water={telemetry.water} />
-      <WeatherCard weather={telemetry.weather} />
 
       {/* Event Audit Stream */}
       <EventLogStream logs={logs} onClear={onClearLogs} />
@@ -144,10 +172,45 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: 30
   },
+  locationPillRow: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 2
+  },
+  locationPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(56, 189, 248, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.25)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 6
+  },
+  locationText: {
+    color: '#f8fafc',
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  syncDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#10b981'
+  },
+  syncText: {
+    color: '#38bdf8',
+    fontSize: 10,
+    fontWeight: '600'
+  },
   gridRow: {
     flexDirection: 'row',
     gap: 12,
     paddingHorizontal: 16,
-    marginTop: 12
+    marginTop: 10
+  },
+  sectionPadding: {
+    paddingHorizontal: 16
   }
 });

@@ -719,37 +719,54 @@ class WeatherAirDashboard {
    * Render Urban Traffic & Mobility Telemetry (TomTom Flow API / Anand Arterials)
    */
   renderTrafficBox(traffic) {
-    const curSpeed = traffic.currentSpeed ?? 35;
-    const freeSpeed = traffic.freeFlowSpeed ?? 50;
-    const congestion = traffic.congestionIndex ?? 30;
-    const statusText = traffic.status || 'Smooth Flow';
+    const isReal = traffic && traffic.isRealData !== false && traffic.configured !== false;
+    const curSpeed = (traffic && traffic.currentSpeed != null) ? traffic.currentSpeed : '--';
+    const freeSpeed = (traffic && traffic.freeFlowSpeed != null) ? traffic.freeFlowSpeed : '--';
+    const congestion = (traffic && traffic.congestionIndex != null && isReal) ? traffic.congestionIndex : 0;
+    const statusText = (traffic && traffic.status) || (isReal ? 'Smooth Flow' : 'Awaiting Mappls Key');
 
     this.setText('trafficCurrentSpeed', curSpeed);
-    this.setText('trafficFreeFlowSpeed', `Baseline: ${freeSpeed} km/h`);
+    this.setText('trafficFreeFlowSpeed', isReal && traffic.freeFlowSpeed != null ? `Baseline: ${freeSpeed} km/h` : 'Baseline: -- km/h');
     this.setText('trafficStatusText', statusText);
-    this.setText('trafficCongestionVal', `${congestion}%`);
+    this.setText('trafficCongestionVal', isReal && traffic.congestionIndex != null ? `${congestion}%` : '--%');
     this.setText('trafficCongestionLabel', statusText.toUpperCase());
 
-    const efficiencyText = congestion <= 30 ? 'Optimal' : (congestion <= 50 ? 'Moderate' : 'Constrained');
+    const efficiencyText = !isReal ? 'Awaiting Key' : (congestion <= 30 ? 'Optimal' : (congestion <= 50 ? 'Moderate' : 'Constrained'));
     this.setText('trafficEfficiencyText', efficiencyText);
 
     // Circular Congestion Ring (Circumference: 251.2)
     const trafficCircleRing = document.getElementById('trafficCircleRing');
     if (trafficCircleRing) {
-      const progress = Math.min(congestion / 100, 1);
+      const progress = isReal ? Math.min(congestion / 100, 1) : 0;
       const dashoffset = 251.2 * (1 - progress);
       trafficCircleRing.style.strokeDashoffset = dashoffset;
     }
 
-    const delaySec = traffic.delaySeconds ?? 55;
-    this.setText('trafficDelayVal', delaySec > 0 ? `+${delaySec} sec` : '0 sec');
-    this.setText('trafficConfidenceVal', `${traffic.confidence ?? 95}%`);
-    this.setText('trafficIncidentsVal', `${traffic.incidentsCount ?? 0} Incidents`);
+    const delaySec = traffic?.delaySeconds ?? 0;
+    this.setText('trafficDelayVal', isReal ? (delaySec > 0 ? `+${delaySec} sec` : '0 sec') : '--');
+    this.setText('trafficConfidenceVal', isReal ? `${traffic.confidence ?? 95}%` : '--');
+
+    // Incidents & road closures display
+    const incidentsCount = traffic?.incidentsCount ?? 0;
+    const hasClosure = Boolean(traffic?.roadClosure);
+    let incidentsText = '0 Alerts';
+    if (hasClosure) {
+      incidentsText = `Closure (${incidentsCount})`;
+    } else if (incidentsCount > 0) {
+      incidentsText = `${incidentsCount} Incidents`;
+    } else if (!isReal) {
+      incidentsText = '--';
+    }
+    this.setText('trafficIncidentsVal', incidentsText);
 
     // Status Badge Styling
     const statusBadge = document.getElementById('trafficStatusBadge');
     if (statusBadge) {
-      if (congestion <= 25) {
+      if (hasClosure) {
+        statusBadge.className = 'px-2.5 py-0.5 text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded-full flex items-center gap-1.5';
+      } else if (!isReal) {
+        statusBadge.className = 'px-2.5 py-0.5 text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full flex items-center gap-1.5';
+      } else if (congestion <= 25) {
         statusBadge.className = 'px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full flex items-center gap-1.5';
       } else if (congestion <= 45) {
         statusBadge.className = 'px-2.5 py-0.5 text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-full flex items-center gap-1.5';
@@ -760,19 +777,37 @@ class WeatherAirDashboard {
 
     // Dynamic Corridors List
     const corridorsList = document.getElementById('trafficCorridorsList');
-    if (corridorsList && Array.isArray(traffic.corridors) && traffic.corridors.length > 0) {
-      corridorsList.innerHTML = traffic.corridors.map(c => `
-        <div class="p-2.5 rounded-lg bg-dark-950/80 border border-slate-800 flex items-center justify-between">
-          <div class="truncate mr-2">
-            <div class="text-xs font-semibold text-slate-200 truncate">${c.name}</div>
-            <div class="text-[10px] ${c.status.includes('Smooth') || c.status.includes('Free') || c.status.includes('Rapid') ? 'text-emerald-400' : 'text-amber-400'} font-mono">${c.status}</div>
+    if (corridorsList) {
+      if (Array.isArray(traffic?.corridors) && traffic.corridors.length > 0) {
+        corridorsList.innerHTML = traffic.corridors.map(c => `
+          <div class="p-2.5 rounded-lg bg-dark-950/80 border border-slate-800 flex items-center justify-between">
+            <div class="truncate mr-2">
+              <div class="text-xs font-semibold text-slate-200 truncate">${escapeHtml(c.name)}</div>
+              <div class="text-[10px] ${(c.status || '').includes('Smooth') || (c.status || '').includes('Free') || (c.status || '').includes('Rapid') ? 'text-emerald-400' : ((c.status || '').includes('Heavy') || (c.status || '').includes('Closure') ? 'text-rose-400' : 'text-amber-400')} font-mono">${escapeHtml(c.status || 'Normal Flow')}</div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="text-xs font-bold font-mono text-white">${c.speed} km/h</div>
+              <div class="text-[9px] text-slate-500 font-mono">Free: ${c.freeFlow} km/h</div>
+            </div>
           </div>
-          <div class="text-right shrink-0">
-            <div class="text-xs font-bold font-mono text-white">${c.speed} km/h</div>
-            <div class="text-[9px] text-slate-500 font-mono">Free: ${c.freeFlow} km/h</div>
+        `).join('');
+      } else if (!isReal && traffic?.configured === false) {
+        corridorsList.innerHTML = `
+          <div class="p-3 rounded-lg bg-dark-950/80 border border-slate-800 text-center">
+            <div class="text-xs text-amber-400 font-semibold mb-1">Mappls Traffic API Setup</div>
+            <div class="text-[10px] text-slate-400 leading-relaxed">
+              Add your Mappls credentials (<span class="text-sky-300 font-mono font-semibold">MAPPLS_CLIENT_ID</span> &amp; <span class="text-sky-300 font-mono font-semibold">MAPPLS_CLIENT_SECRET</span> or <span class="text-sky-300 font-mono font-semibold">MAPPLS_REST_API_KEY</span>) to local <span class="text-amber-300 font-mono">.env</span> to stream live Indian traffic flow and incidents.
+            </div>
           </div>
-        </div>
-      `).join('');
+        `;
+      } else {
+        corridorsList.innerHTML = `
+          <div class="p-3 rounded-lg bg-dark-950/80 border border-slate-800 text-center">
+            <div class="text-xs text-emerald-400 font-semibold mb-1">Live Road Network Clear</div>
+            <div class="text-[10px] text-slate-400">Mappls reports smooth, optimal traffic flow across monitored routes.</div>
+          </div>
+        `;
+      }
     }
   }
 

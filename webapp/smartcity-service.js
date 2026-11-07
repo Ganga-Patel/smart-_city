@@ -13,6 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const mapplsTrafficService = require('./mappls-traffic-service');
 
 // Fixed Location Requirement: Anand, Gujarat, India ONLY
 const FIXED_LOCATION = 'Anand, Gujarat, India';
@@ -515,118 +516,15 @@ function normalizeFirebaseData(raw) {
   };
 }
 
-// In-memory cache for traffic data (30-second TTL to avoid quota burn)
-let cachedTrafficData = {
-  data: null,
-  timestamp: 0,
-  cacheDurationMs: 30000
-};
-
 /**
- * Fetch Traffic Flow data for Anand, Gujarat, India
- * Uses TomTom Flow API when valid API key is present in 'API wheather and air quality.txt'
- * Otherwise provides high-fidelity, real-time simulated Anand arterial telemetry.
+ * Fetch Real-time Traffic Flow & Incident data for Anand, Gujarat, India
+ * Powered exclusively by Mappls (MapmyIndia) Traffic Flow and Traffic Events APIs.
+ * Never generates fake or simulated data.
  */
 async function fetchAnandTrafficData(config) {
-  const now = Date.now();
-  if (cachedTrafficData.data && (now - cachedTrafficData.timestamp < cachedTrafficData.cacheDurationMs)) {
-    return cachedTrafficData.data;
-  }
-
-  // Latitude & Longitude coordinates for Anand city center
   const ANAND_LAT = 22.5645;
   const ANAND_LON = 72.9289;
-
-  // 1. Live TomTom Traffic Flow Segment API Call (if real key configured)
-  if (config.trafficApiKey && config.trafficApiKey !== 'YOUR_API_KEY') {
-    const url = `https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?key=${config.trafficApiKey}&point=${ANAND_LAT},${ANAND_LON}`;
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 6000);
-      const res = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeout);
-
-      if (res.ok) {
-        const json = await res.json();
-        const flow = json.flowSegmentData || {};
-        const curSpeed = typeof flow.currentSpeed === 'number' ? flow.currentSpeed : 38;
-        const freeSpeed = typeof flow.freeFlowSpeed === 'number' ? flow.freeFlowSpeed : 50;
-        const curTime = typeof flow.currentTravelTime === 'number' ? flow.currentTravelTime : 140;
-        const freeTime = typeof flow.freeFlowTravelTime === 'number' ? flow.freeFlowTravelTime : 105;
-        const delaySec = Math.max(0, curTime - freeTime);
-        const congestion = Math.max(0, Math.min(100, Math.round(((freeSpeed - curSpeed) / freeSpeed) * 100)));
-
-        let statusText = 'Smooth Flow';
-        if (congestion > 45) statusText = 'Heavy Congestion';
-        else if (congestion > 25) statusText = 'Moderate Flow';
-
-        const result = {
-          location: FIXED_LOCATION,
-          currentSpeed: curSpeed,
-          freeFlowSpeed: freeSpeed,
-          congestionIndex: congestion,
-          status: statusText,
-          travelTimeSec: curTime,
-          freeFlowTravelTimeSec: freeTime,
-          delaySeconds: delaySec,
-          confidence: flow.confidence ? Math.round(flow.confidence * 100) : 90,
-          roadClosure: !!flow.roadClosure,
-          incidentsCount: 0,
-          corridors: [
-            { name: 'Anand – Vidyanagar Road (SH 188)', speed: Math.max(20, curSpeed - 2), status: 'Smooth Flow', freeFlow: 50 },
-            { name: 'Station Road (Anand Junction)', speed: Math.max(15, curSpeed - 8), status: 'Light Traffic', freeFlow: 40 },
-            { name: 'NH 48 Samarkha Expressway', speed: Math.max(50, curSpeed + 28), status: 'Free Flow', freeFlow: 80 },
-            { name: 'Borsad Chokdi Junction', speed: Math.max(20, curSpeed - 5), status: 'Moderate Flow', freeFlow: 45 }
-          ],
-          timestamp: now
-        };
-
-        cachedTrafficData = { data: result, timestamp: now, cacheDurationMs: 30000 };
-        return result;
-      }
-    } catch (err) {
-      console.warn('[Traffic API] Live call error:', err.message);
-    }
-  }
-
-  // 2. Realistic live-calibrated Anand arterial traffic engine
-  const hour = new Date().getHours();
-  // Peak rush hours in Anand: 9-11 AM & 5:30-8 PM
-  const isPeak = (hour >= 9 && hour <= 11) || (hour >= 17 && hour <= 20);
-  const baseSpeed = isPeak ? 32 : 39;
-  const jitter = Math.sin(now / 20000) * 3;
-  const currentSpeed = Math.round(baseSpeed + jitter);
-  const freeFlowSpeed = 50;
-  const congestionIndex = Math.max(12, Math.min(65, Math.round(((freeFlowSpeed - currentSpeed) / freeFlowSpeed) * 100)));
-  const delaySec = isPeak ? 55 : 25;
-
-  let status = 'Smooth Flow';
-  if (congestionIndex > 45) status = 'Heavy Congestion';
-  else if (congestionIndex > 25) status = 'Moderate Flow';
-
-  const result = {
-    location: FIXED_LOCATION,
-    currentSpeed: currentSpeed,
-    freeFlowSpeed: freeFlowSpeed,
-    congestionIndex: congestionIndex,
-    status: status,
-    travelTimeSec: 130 + delaySec,
-    freeFlowTravelTimeSec: 105,
-    delaySeconds: delaySec,
-    confidence: 95,
-    roadClosure: false,
-    incidentsCount: 0,
-    corridors: [
-      { name: 'Anand – Vidyanagar Road (SH 188)', speed: Math.round(currentSpeed * 0.95), status: isPeak ? 'Moderate Flow' : 'Smooth Flow', freeFlow: 50 },
-      { name: 'Station Road (Anand Junction)', speed: Math.round(currentSpeed * 0.76), status: 'Normal Flow', freeFlow: 40 },
-      { name: 'NH 48 Samarkha Expressway', speed: Math.round(68 + jitter), status: 'Rapid / Free Flow', freeFlow: 80 },
-      { name: 'Borsad Chokdi Junction', speed: Math.round(currentSpeed * 0.84), status: 'Normal Flow', freeFlow: 45 }
-    ],
-    timestamp: now
-  };
-
-  cachedTrafficData = { data: result, timestamp: now, cacheDurationMs: 15000 };
-  return result;
+  return await mapplsTrafficService.fetchTrafficForLocation(ANAND_LAT, ANAND_LON, FIXED_LOCATION);
 }
 
 /**

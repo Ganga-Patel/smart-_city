@@ -8,5 +8,14 @@ ec4f42c4481e2da61e4656ae48c1cd24
 air api 
 $ curl -i "http://api.waqi.info/feed/anand/?token=demo"
 
-traffic api
-https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?key=YOUR_API_KEY&point=LAT,LON
+traffic api (Mappls / MapmyIndia - Indian Traffic Flow & Events)
+https://apis.mappls.com/console/
+
+mappls client id
+YOUR_MAPPLS_CLIENT_ID
+
+mappls client secret
+YOUR_MAPPLS_CLIENT_SECRET
+
+mappls rest api key
+YOUR_MAPPLS_REST_API_KEY

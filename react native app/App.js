@@ -10,6 +10,7 @@ import SettingsScreen from './screens/SettingsScreen';
 import { subscribeToTelemetry } from './services/firebase';
 import { evaluateTelemetryAlerts } from './services/alerts';
 import { normalizeRawTelemetry } from './services/normalizer';
+import { startUnifiedPolling, fetchUnifiedDashboardData } from './services/api';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -39,11 +40,12 @@ export default function App() {
     setLogs(prev => [{ time, tag, message }, ...prev.slice(0, 30)]);
   };
 
-  // 1. Subscribe to Firebase Realtime Database
+  // 1. Subscribe to Live WebApp & Vercel Unified Telemetry (with Firebase fallback)
   useEffect(() => {
-    logEvent('NET', 'Listening to Firebase /smartcity and /sensor paths.');
+    logEvent('NET', 'Connecting to WebApp & Vercel Unified Telemetry Stream...');
     
-    const unsubscribe = subscribeToTelemetry(
+    // Live continuous polling of /api/dashboard-data (matches WebApp)
+    const unsubApi = startUnifiedPolling(
       (data) => {
         if (!isDemoMode) {
           handleIncomingTelemetry(data);
@@ -51,12 +53,30 @@ export default function App() {
       },
       (connected) => {
         setIsConnected(connected);
-        logEvent('NET', connected ? 'Firebase connected.' : 'Firebase disconnected.');
+        if (connected) {
+          logEvent('NET', 'Connected to WebApp & Vercel Unified API.');
+        } else {
+          logEvent('NET', 'Retrying WebApp API connection...');
+        }
+      },
+      5000
+    );
+
+    // Secondary fallback listener for direct Firebase RTDB
+    const unsubFb = subscribeToTelemetry(
+      (data) => {
+        if (!isDemoMode && data) {
+          handleIncomingTelemetry(data);
+        }
+      },
+      (connected) => {
+        if (connected) setIsConnected(true);
       }
     );
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubApi) unsubApi();
+      if (unsubFb) unsubFb();
     };
   }, [isDemoMode]);
 
@@ -144,12 +164,19 @@ export default function App() {
   };
 
   // Pull to refresh action
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    logEvent('NET', 'Refreshing telemetry stream...');
-    setTimeout(() => {
+    logEvent('NET', 'Refreshing live WebApp & Vercel telemetry stream...');
+    try {
+      const data = await fetchUnifiedDashboardData();
+      handleIncomingTelemetry(data);
+      setIsConnected(true);
+      logEvent('NET', `Synchronized with ${data.location || 'WebApp'}.`);
+    } catch (err) {
+      logEvent('NET', `Refresh failed: ${err.message}`);
+    } finally {
       setIsRefreshing(false);
-    }, 1000);
+    }
   };
 
   // Render current tab content
@@ -174,6 +201,7 @@ export default function App() {
             isDemoMode={isDemoMode} 
             onToggleDemo={toggleDemoMode} 
             isConnected={isConnected} 
+            onSyncNow={handleRefresh}
           />
         );
       default:

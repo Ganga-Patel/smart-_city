@@ -3,6 +3,7 @@ const path = require('path');
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getDatabase } = require('firebase-admin/database');
 const smartcityService = require('./smartcity-service');
+const mapplsTrafficService = require('./mappls-traffic-service');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,12 +26,18 @@ try {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Aggressive global cache-busting middleware to guarantee browser never serves stale assets
+// Aggressive global cache-busting & CORS middleware to guarantee browser and mobile apps never face stale assets or CORS blocks
 app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
   res.setHeader('Surrogate-Control', 'no-store');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
   next();
 });
 
@@ -396,7 +403,7 @@ app.get('/api/location/weather', async (req, res) => {
     };
 
     // 3. Urban Traffic Mobility Payload (Worldwide Corridor Telemetry)
-    const trafficPayload = generateLocationTraffic(lat, lon, name);
+    const trafficPayload = await mapplsTrafficService.fetchTrafficForLocation(lat, lon, name);
 
     // 4. Solar & Lunar Ephemeris Payload
     const astronomyPayload = smartcityService.computeAstronomy(wRes.daily, new Date());
@@ -419,197 +426,7 @@ app.get('/api/location/weather', async (req, res) => {
   }
 });
 
-/**
- * Helper: Computes realistic urban traffic & arterial corridor telemetry for any coordinates
- */
-function generateLocationTraffic(lat, lon, locationName = 'Urban') {
-  const hour = new Date().getHours();
-  // Peak rush hours: 9-11 AM & 5:30-8 PM
-  const isPeak = (hour >= 9 && hour <= 11) || (hour >= 17 && hour <= 20);
-  const baseSpeed = isPeak ? 31 : 38;
-  const seed = Math.abs(Math.sin(lat * 100 + lon * 50));
-  const curSpeed = Math.round(baseSpeed + (seed * 6 - 3));
-  const freeFlow = 50;
-  const congestion = Math.max(10, Math.min(75, Math.round(((freeFlow - curSpeed) / freeFlow) * 100)));
-  const delaySec = Math.round(congestion * 1.2);
 
-  let status = 'Smooth Flow';
-  if (congestion > 45) status = 'Heavy Congestion';
-  else if (congestion > 25) status = 'Moderate Flow';
-
-  // Distance from Anand Center
-  const dLat = (lat - 22.5645) * Math.PI / 180;
-  const dLon = (lon - 72.9289) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-            Math.cos(22.5645 * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
-            Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const distKm = 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-  let corridors = [];
-  if (distKm <= 12) {
-    // Official Anand Arteries
-    corridors = [
-      {
-        id: 'corridor-sh188',
-        name: 'Anand – Vidyanagar Road (SH 188)',
-        speed: Math.max(20, curSpeed - 2),
-        freeFlow: 50,
-        status: isPeak ? 'Moderate Flow' : 'Smooth Flow',
-        congestion: Math.min(70, congestion + 5),
-        delaySec: delaySec,
-        coordinates: [
-          [72.9385, 22.5630],
-          [72.9355, 22.5595],
-          [72.9320, 22.5550],
-          [72.9295, 22.5525],
-          [72.9260, 22.5505],
-          [72.9215, 22.5480]
-        ]
-      },
-      {
-        id: 'corridor-station',
-        name: 'Station Road (Anand Junction)',
-        speed: Math.max(15, curSpeed - 8),
-        freeFlow: 40,
-        status: 'Normal Flow',
-        congestion: Math.min(80, congestion + 12),
-        delaySec: delaySec + 15,
-        coordinates: [
-          [72.9580, 22.5642],
-          [72.9530, 22.5632],
-          [72.9480, 22.5620],
-          [72.9430, 22.5610],
-          [72.9385, 22.5630]
-        ]
-      },
-      {
-        id: 'corridor-nh48',
-        name: 'NH 48 Samarkha Expressway',
-        speed: Math.round(68 + (seed * 8 - 4)),
-        freeFlow: 80,
-        status: 'Rapid / Free Flow',
-        congestion: Math.max(8, congestion - 15),
-        delaySec: Math.max(5, delaySec - 20),
-        coordinates: [
-          [72.9820, 22.5930],
-          [72.9790, 22.5810],
-          [72.9765, 22.5690],
-          [72.9745, 22.5550],
-          [72.9720, 22.5410]
-        ]
-      },
-      {
-        id: 'corridor-borsad',
-        name: 'Borsad Chokdi Junction',
-        speed: Math.max(20, curSpeed - 5),
-        freeFlow: 45,
-        status: 'Normal Flow',
-        congestion: congestion,
-        delaySec: delaySec + 5,
-        coordinates: [
-          [72.9410, 22.5580],
-          [72.9440, 22.5500],
-          [72.9460, 22.5450],
-          [72.9485, 22.5360],
-          [72.9510, 22.5250]
-        ]
-      }
-    ];
-  } else {
-    // Dynamic Arterial Transit Corridors for any searched city worldwide
-    // Corridors are long, well-separated, non-overlapping arterials that radiate from distinct quadrants
-    const cleanName = (locationName && locationName !== 'Urban') ? locationName.split(',')[0].trim() : 'Urban';
-    const r = 0.032; // ~3.5 km radius — long enough to look like real roads
-    corridors = [
-      {
-        // North-South main arterial — runs vertically through the north side
-        id: `corridor-${cleanName}-ns`,
-        name: `${cleanName} N–S Main Arterial`,
-        speed: curSpeed,
-        freeFlow: freeFlow,
-        status: congestion > 45 ? 'Heavy Flow' : (congestion > 25 ? 'Moderate Flow' : 'Smooth Flow'),
-        congestion: congestion,
-        delaySec: delaySec,
-        coordinates: [
-          [lon - 0.005, lat + r],
-          [lon - 0.003, lat + r * 0.65],
-          [lon - 0.001, lat + r * 0.3],
-          [lon + 0.001, lat + r * 0.05],
-          [lon + 0.002, lat - r * 0.25],
-          [lon + 0.003, lat - r * 0.55]
-        ]
-      },
-      {
-        // East-West crossway — runs horizontally through the west side, offset from center
-        id: `corridor-${cleanName}-ew`,
-        name: `${cleanName} E–W Metro Crossway`,
-        speed: Math.max(18, curSpeed - 4),
-        freeFlow: 45,
-        status: 'Normal Flow',
-        congestion: Math.min(70, congestion + 5),
-        delaySec: delaySec + 10,
-        coordinates: [
-          [lon - r, lat + 0.006],
-          [lon - r * 0.65, lat + 0.004],
-          [lon - r * 0.3, lat + 0.002],
-          [lon + r * 0.05, lat - 0.001],
-          [lon + r * 0.4, lat - 0.003],
-          [lon + r, lat - 0.005]
-        ]
-      },
-      {
-        // Ring expressway — forms a clear arc in the north-east quadrant
-        id: `corridor-${cleanName}-ring`,
-        name: `${cleanName} Ring Expressway`,
-        speed: Math.round(curSpeed * 1.45),
-        freeFlow: 80,
-        status: 'Rapid / Free Flow',
-        congestion: Math.max(8, congestion - 15),
-        delaySec: Math.max(5, delaySec - 15),
-        coordinates: [
-          [lon + r * 0.15, lat + r],
-          [lon + r * 0.55, lat + r * 0.85],
-          [lon + r * 0.85, lat + r * 0.55],
-          [lon + r,        lat + r * 0.1],
-          [lon + r * 0.9,  lat - r * 0.35],
-          [lon + r * 0.7,  lat - r * 0.65]
-        ]
-      },
-      {
-        // South-West diagonal transit axis — runs through SW quadrant independently
-        id: `corridor-${cleanName}-axis`,
-        name: `${cleanName} SW Transit Axis`,
-        speed: Math.max(15, curSpeed - 6),
-        freeFlow: 40,
-        status: isPeak ? 'Heavy Congestion' : 'Moderate Flow',
-        congestion: Math.min(80, congestion + 12),
-        delaySec: delaySec + 20,
-        coordinates: [
-          [lon - r * 0.1,  lat - r * 0.05],
-          [lon - r * 0.35, lat - r * 0.3],
-          [lon - r * 0.55, lat - r * 0.5],
-          [lon - r * 0.75, lat - r * 0.7],
-          [lon - r,        lat - r * 0.85]
-        ]
-      }
-    ];
-  }
-
-  return {
-    location: locationName,
-    currentSpeed: curSpeed,
-    freeFlowSpeed: freeFlow,
-    congestionIndex: congestion,
-    status: status,
-    travelTimeSec: 130 + delaySec,
-    freeFlowTravelTimeSec: 105,
-    delaySeconds: delaySec,
-    confidence: 95,
-    roadClosure: false,
-    corridors: corridors,
-    timestamp: Date.now()
-  };
-}
 
 
 

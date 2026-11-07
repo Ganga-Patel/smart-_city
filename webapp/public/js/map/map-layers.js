@@ -560,20 +560,22 @@ export class SmartCityMapLayers {
     // =========================================================================
     // 5. POPULATE URBAN TRAFFIC TELEMETRY VALUES
     // =========================================================================
-    if (traffic) {
+    if (traffic && traffic.currentSpeed != null) {
       if (trafficSpeedEl) trafficSpeedEl.textContent = `${traffic.currentSpeed} km/h`;
       if (trafficCongestionEl) trafficCongestionEl.textContent = `${traffic.congestionIndex}% Congestion`;
       if (trafficStatusEl) {
         let bgClass = 'bg-emerald-500/10 text-emerald-400';
-        if (traffic.congestionIndex > 45) bgClass = 'bg-rose-500/10 text-rose-400';
+        if (traffic.roadClosure) bgClass = 'bg-rose-500/10 text-rose-400';
+        else if (traffic.congestionIndex > 45) bgClass = 'bg-rose-500/10 text-rose-400';
         else if (traffic.congestionIndex > 25) bgClass = 'bg-amber-500/10 text-amber-400';
-        trafficStatusEl.textContent = traffic.status || 'Smooth';
+        trafficStatusEl.textContent = traffic.roadClosure ? 'Closure' : (traffic.status || 'Smooth');
         trafficStatusEl.className = `text-[9px] font-bold px-1.5 py-0.2 rounded ${bgClass}`;
       }
     } else {
       if (trafficSpeedEl) trafficSpeedEl.textContent = '-- km/h';
+      if (trafficCongestionEl) trafficCongestionEl.textContent = traffic?.status ? traffic.status : '-- Congestion';
       if (trafficStatusEl) {
-        trafficStatusEl.textContent = 'Syncing';
+        trafficStatusEl.textContent = traffic?.status || 'No Data';
         trafficStatusEl.className = 'text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-800 text-slate-400';
       }
     }

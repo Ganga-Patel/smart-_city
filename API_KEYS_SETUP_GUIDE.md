@@ -10,7 +10,7 @@ All APIs listed below offer **100% Free Tiers** that do **NOT** require a paid s
 
 | Service | Provider | What It Powers | Free Tier Quota | Registration URL |
 | :--- | :--- | :--- | :--- | :--- |
-| **Traffic Flow API** | **TomTom Developer** | Live Anand traffic speeds, congestion %, and corridor delays | **2,500 requests/day free** (no credit card) | [developer.tomtom.com/user/register](https://developer.tomtom.com/user/register) |
+| **Traffic Flow & Events API** | **Mappls (MapmyIndia)** | Real-time Indian traffic speeds, congestion %, road closures & accidents | **10,000 transactions/month free** | [apis.mappls.com/console/](https://apis.mappls.com/console/) |
 | **Interactive Map Tiles** | **Carto Dark / MapLibre** | High-resolution dark mode street basemap of Anand | **Unlimited Open Access** (Key optional: [maptiler.com](https://www.maptiler.com/)) | Default is keyless; MapTiler optional |
 | **Weather API** | **Open-Meteo & Weatherstack** | Ambient temperature, humidity, rain probability, wind, pressure | **Unlimited (Open-Meteo)** / **250/mo (Weatherstack)** | [weatherstack.com/signup/free](https://weatherstack.com/signup/free) |
 | **Air Quality API** | **WAQI (World Air Quality Index)** | EPA/NAAQS AQI score, PM2.5, PM10, trace gases | **1,000 requests/day free** | [aqicn.org/data-platform/token/](https://aqicn.org/data-platform/token/) |
@@ -18,40 +18,35 @@ All APIs listed below offer **100% Free Tiers** that do **NOT** require a paid s
 
 ---
 
-## 1. TomTom Traffic Flow API Key (Recommended for Live Speeds)
+## 1. Mappls (MapmyIndia) Traffic Flow & Events API
 
-The platform queries the **TomTom Traffic Flow Segment API** for Anand arterial coordinates (`22.5645, 72.9289`).
+The platform queries the **Mappls Traffic Flow and Traffic Events APIs** to fetch 100% real Indian traffic data (corridor speeds, congestion index, travel delays, road closures, and accidents) without any fake/simulated data.
 
-### Step-by-Step Instructions to Get a Free Key:
-1. Go to the TomTom Developer registration page:  
-   👉 **[https://developer.tomtom.com/user/register](https://developer.tomtom.com/user/register)**
-2. Fill out the registration form:
-   * First Name & Last Name
-   * Email Address
-   * Password
-   * Country: **India**
-   * Check the box agreeing to the Terms and Conditions.
-3. Click **Register**.
-4. Check your email inbox for a verification email from TomTom and click the **Activate Account** link.
-5. Log in to your TomTom Dashboard:  
-   👉 **[https://developer.tomtom.com/user/me/apps](https://developer.tomtom.com/user/me/apps)**
-6. You will see a default application named **My First API Project** (or click **Add a new app**).
-7. Copy your **Consumer API Key** (a 32-character string of letters and numbers, e.g., `aBcDeFgHiJkLmNoPqRsTuVwXyZ123456`).
+### Step-by-Step Instructions to Get Free Mappls Credentials:
+1. Go to the Mappls Developer Console:  
+   👉 **[https://apis.mappls.com/console/](https://apis.mappls.com/console/)**
+2. Sign up or log in using your email/mobile.
+3. In the Mappls Console:
+   * Navigate to **Projects** $\rightarrow$ Create a Project (e.g. `Smart City Platform`).
+   * Navigate to **Credentials / API Keys**.
+   * You can obtain:
+     - **OAuth2 Credentials** (Recommended): `Client ID` and `Client Secret`
+     - **REST API Key** (Alternative): A static 32-character REST Key.
 
-### How to Configure It in the Project:
-1. Open the file [`API wheather and air quality.txt`](file:///D:/smartcity/API%20wheather%20and%20air%20quality.txt) in your code editor.
-2. Look at lines 11–12:
-   ```text
-   traffic api
-   https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?key=YOUR_API_KEY&point=LAT,LON
+### How to Configure It Securely in Local Environment Variables (.env):
+1. Open the local `.env` file in the project root (`D:\smartcity\.env`).
+2. Add your credentials:
+   ```env
+   # Option 1: Mappls OAuth2 Credentials (Recommended)
+   MAPPLS_CLIENT_ID=your_client_id_here
+   MAPPLS_CLIENT_SECRET=your_client_secret_here
+
+   # Option 2: Mappls Static REST API Key
+   MAPPLS_REST_API_KEY=your_rest_api_key_here
    ```
-3. Replace `YOUR_API_KEY` with your copied TomTom key:
-   ```text
-   traffic api
-   https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?key=YOUR_ACTUAL_TOMTOM_KEY&point=22.5645,72.9289
-   ```
-4. Save the file.
-5. Our backend service ([`webapp/smartcity-service.js`](file:///D:/smartcity/webapp/smartcity-service.js)) automatically reads the key directly from this text file without requiring a server rebuild!
+3. Save the file.
+4. The backend service ([`webapp/mappls-traffic-service.js`](file:///D:/smartcity/webapp/mappls-traffic-service.js)) automatically reads the credentials directly from `.env` or system environment variables without requiring a server rebuild!
+5. **Git Safety**: The `.env` file is strictly ignored by `.gitignore` and never committed or pushed to GitHub.
 
 ---
 
@@ -166,7 +161,7 @@ Invoke-RestMethod -Uri http://localhost:3000/api/dashboard-data | ConvertTo-Json
 * `success`: Must be `true`.
 * `cityWeather.temperature`: Displays valid Anand temperature (e.g. `28.2 °C`).
 * `airQuality.aqi`: Displays valid AQI score (e.g. `72`).
-* `traffic.currentSpeed`: Displays active speed (e.g. `30 km/h` or live TomTom speed).
+* `traffic.currentSpeed`: Displays active speed (e.g. live Mappls speed or `--` if awaiting key).
 * `traffic.congestionIndex`: Displays congestion percentage (e.g. `40%`).
 
 ---

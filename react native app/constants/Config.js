@@ -24,3 +24,14 @@ export const NODES = [
   { id: 'simulation_node', name: 'Wokwi Virtual Node', hardware: 'ESP32 (MQTT)', path: 'sensor' },
   { id: 'gateway_rpi', name: 'Central Gateway', hardware: 'Raspberry Pi 4', path: 'smartcity/gateway' }
 ];
+
+export const API_CONFIG = {
+  // Primary LAN IP of WebApp server running on port 3000
+  lanUrl: 'http://10.10.223.209:3000',
+  // Localhost for Web browser testing
+  localUrl: 'http://localhost:3000',
+  // Optional Vercel production deployment URL
+  vercelUrl: '',
+  // Live polling interval in milliseconds
+  pollIntervalMs: 5000
+};

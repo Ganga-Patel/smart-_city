@@ -234,93 +234,60 @@ export class SmartCityTrafficLayer {
 
   generateGeoJson(trafficData) {
     const corridors = trafficData?.corridors || [];
-    const overallDelay = trafficData?.delaySeconds ?? 45;
+    const overallDelay = trafficData?.delaySeconds ?? 0;
+    const isReal = trafficData?.isRealData !== false && trafficData?.configured !== false;
 
-    // Support dynamic corridor geometries for any searched location worldwide
-    if (corridors.length > 0 && Array.isArray(corridors[0].coordinates)) {
-      const features = corridors.map((c, idx) => {
-        const speed = c.speed ?? 35;
-        const freeFlow = c.freeFlow ?? 50;
-        const congestion = c.congestion ?? Math.max(0, Math.min(100, Math.round((1 - (speed / freeFlow)) * 100)));
-        let color = '#10b981';
-        let flowRating = 'Optimal Flow';
-        if (congestion > 45) {
-          color = '#ef4444';
-          flowRating = 'Constrained';
-        } else if (congestion > 25) {
-          color = '#f59e0b';
-          flowRating = 'Moderate Flow';
-        }
-
-        return {
-          type: 'Feature',
-          properties: {
-            id: c.id || `corridor-${idx}`,
-            name: c.name || `Corridor ${idx + 1}`,
-            speed: speed,
-            freeFlow: freeFlow,
-            status: c.status || flowRating,
-            congestion: congestion,
-            color: color,
-            flowRating: flowRating,
-            delaySec: c.delaySec ?? Math.round(overallDelay * (congestion / 40))
-          },
-          geometry: {
-            type: 'LineString',
-            coordinates: c.coordinates
-          }
-        };
-      });
-
+    // Zero Fake Data Policy: If no real corridors are present or unconfigured, return empty features
+    if (!isReal || !Array.isArray(corridors) || corridors.length === 0) {
       return {
         type: 'FeatureCollection',
-        features: features
+        features: []
       };
     }
 
-    const features = CORRIDOR_GEOMETRIES.map((geom) => {
-      // Match with live API telemetry
-      const live = corridors.find(c => c.name.includes(geom.matchKey) || geom.matchKey.includes(c.name));
-      const speed = live?.speed ?? geom.defaultSpeed;
-      const freeFlow = live?.freeFlow ?? geom.defaultFreeFlow;
-      const status = live?.status ?? geom.defaultStatus;
+    const features = [];
 
-      // Calculate congestion %: max(0, round((1 - speed/freeFlow) * 100))
-      const congestion = Math.max(0, Math.min(100, Math.round((1 - (speed / freeFlow)) * 100)));
+    // Render real road corridor features from Mappls
+    for (let idx = 0; idx < corridors.length; idx++) {
+      const c = corridors[idx];
+      if (!Array.isArray(c.coordinates) || c.coordinates.length < 2) continue;
 
-      // Color evaluation:
-      // <= 25%: Emerald (#10b981)
-      // 26% - 45%: Amber (#f59e0b)
-      // > 45%: Rose (#ef4444)
-      let color = '#10b981';
+      const speed = c.speed ?? 35;
+      const freeFlow = c.freeFlow ?? 50;
+      const congestion = c.congestion ?? Math.max(0, Math.min(100, Math.round((1 - (speed / freeFlow)) * 100)));
+
+      let color = '#10b981'; // Free Flow - Emerald
       let flowRating = 'Optimal Flow';
-      if (congestion > 45) {
+      if (c.status && (c.status.includes('Closure') || c.status.includes('Block'))) {
         color = '#ef4444';
+        flowRating = 'Road Closure';
+      } else if (congestion > 45) {
+        color = '#ef4444'; // Heavy - Rose
         flowRating = 'Constrained';
       } else if (congestion > 25) {
-        color = '#f59e0b';
+        color = '#f59e0b'; // Moderate - Amber
         flowRating = 'Moderate Flow';
       }
 
-      return {
+      features.push({
         type: 'Feature',
         properties: {
-          id: geom.id,
-          name: geom.name,
+          id: c.id || `corridor-${idx}`,
+          name: c.name || `Corridor ${idx + 1}`,
           speed: speed,
           freeFlow: freeFlow,
-          status: status,
+          status: c.status || flowRating,
           congestion: congestion,
           color: color,
           flowRating: flowRating,
-          delaySec: Math.round(overallDelay * (congestion / 40))
+          delaySec: c.delaySec ?? Math.round(overallDelay * (congestion / 40))
         },
         geometry: {
           type: 'LineString',
-          coordinates: geom.coordinates
+          coordinates: c.coordinates
         }
-      };
-    });
+      });
+    }
 
     return {
       type: 'FeatureCollection',
@@ -328,7 +295,7 @@ export class SmartCityTrafficLayer {
     };
   }
 
-  updateData(trafficData) {
+    updateData(trafficData) {
     if (!trafficData) return;
     this.latestTraffic = trafficData;
 

@@ -1,15 +1,110 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, TextInput } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
-import { NODES, FIREBASE_CONFIG, DEFAULT_THRESHOLDS } from '../constants/Config';
+import { NODES, FIREBASE_CONFIG, DEFAULT_THRESHOLDS, API_CONFIG } from '../constants/Config';
+import { getActiveBaseUrl, setActiveBaseUrl, fetchUnifiedDashboardData } from '../services/api';
 
-export default function SettingsScreen({ activeNode, onSelectNode, isDemoMode, onToggleDemo, isConnected }) {
+export default function SettingsScreen({ 
+  activeNode, 
+  onSelectNode, 
+  isDemoMode, 
+  onToggleDemo, 
+  isConnected,
+  onSyncNow
+}) {
+  const [customUrl, setCustomUrl] = useState(getActiveBaseUrl());
+  const [testStatus, setTestStatus] = useState(null); // 'testing' | 'success' | 'error'
+  const [testMessage, setTestMessage] = useState('');
+
+  const handleApplyUrl = async (urlToApply) => {
+    const url = (urlToApply || customUrl).trim();
+    if (!url) return;
+    setActiveBaseUrl(url);
+    setCustomUrl(url);
+    setTestStatus('testing');
+    setTestMessage('Connecting to ' + url + '...');
+
+    try {
+      const data = await fetchUnifiedDashboardData(url);
+      setTestStatus('success');
+      setTestMessage(`Connected! Received telemetry from ${data.location} (Temp: ${data.temperature}°C)`);
+      if (onSyncNow) onSyncNow();
+    } catch (err) {
+      setTestStatus('error');
+      setTestMessage(`Failed: ${err.message}`);
+    }
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Text style={styles.title}>System Settings & Gateway</Text>
-        <Text style={styles.subtitle}>Telemetry nodes, threshold configuration & cloud endpoints</Text>
+        <Text style={styles.subtitle}>Telemetry nodes, WebApp/Vercel endpoints & thresholds</Text>
+      </View>
+
+      {/* Backend & Vercel Sync Endpoint */}
+      <View style={styles.sectionCard}>
+        <View style={styles.sectionHeader}>
+          <MaterialCommunityIcons name="server-network" size={18} color={Colors.brand.sky} />
+          <Text style={styles.sectionTitle}>WebApp & Vercel Backend Sync</Text>
+        </View>
+
+        <Text style={styles.inputHelp}>
+          Sync live sensor telemetry, Anand city weather, air quality, and traffic from your running webapp or Vercel deployment:
+        </Text>
+
+        <View style={styles.urlInputRow}>
+          <TextInput
+            style={styles.urlInput}
+            value={customUrl}
+            onChangeText={setCustomUrl}
+            placeholder="http://10.10.223.209:3000 or https://your-app.vercel.app"
+            placeholderTextColor="#64748b"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          <TouchableOpacity 
+            style={styles.applyBtn} 
+            onPress={() => handleApplyUrl(customUrl)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.applyBtnText}>Sync</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Quick Presets */}
+        <View style={styles.presetsRow}>
+          <TouchableOpacity 
+            style={styles.presetChip}
+            onPress={() => handleApplyUrl(API_CONFIG.lanUrl)}
+          >
+            <MaterialCommunityIcons name="wifi" size={12} color="#38bdf8" />
+            <Text style={styles.presetText}>Local WebApp (LAN)</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.presetChip}
+            onPress={() => handleApplyUrl(API_CONFIG.localUrl)}
+          >
+            <MaterialCommunityIcons name="laptop" size={12} color="#a855f7" />
+            <Text style={styles.presetText}>Localhost</Text>
+          </TouchableOpacity>
+        </View>
+
+        {testStatus && (
+          <View style={[
+            styles.testBanner, 
+            testStatus === 'success' ? styles.testSuccess : testStatus === 'error' ? styles.testError : styles.testInfo
+          ]}>
+            <MaterialCommunityIcons 
+              name={testStatus === 'success' ? "check-circle" : testStatus === 'error' ? "alert-circle" : "progress-clock"} 
+              size={14} 
+              color={testStatus === 'success' ? '#10b981' : testStatus === 'error' ? '#ef4444' : '#38bdf8'} 
+            />
+            <Text style={styles.testBannerText}>{testMessage}</Text>
+          </View>
+        )}
       </View>
 
       {/* Active Node Selection */}
@@ -82,9 +177,9 @@ export default function SettingsScreen({ activeNode, onSelectNode, isDemoMode, o
           <Text style={styles.infoValue}>{FIREBASE_CONFIG.projectId}</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Cloud Status</Text>
+          <Text style={styles.infoLabel}>Cloud Telemetry Status</Text>
           <Text style={[styles.infoValue, { color: isConnected ? Colors.status.success : Colors.status.danger }]}>
-            {isConnected ? 'Connected (Live RTDB Stream)' : 'Disconnected'}
+            {isConnected ? 'Connected & Synchronized' : 'Offline / Standby'}
           </Text>
         </View>
       </View>
@@ -148,7 +243,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 12
+    marginBottom: 10
   },
   sectionTitle: {
     color: Colors.text.primary,
@@ -156,6 +251,86 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5
+  },
+  inputHelp: {
+    color: Colors.text.muted,
+    fontSize: 11,
+    lineHeight: 16,
+    marginBottom: 10
+  },
+  urlInputRow: {
+    flexDirection: 'row',
+    gap: 8
+  },
+  urlInput: {
+    flex: 1,
+    backgroundColor: Colors.surfaceHighlight,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    color: '#fff',
+    fontSize: 12,
+    fontFamily: 'monospace'
+  },
+  applyBtn: {
+    backgroundColor: '#0284c7',
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10
+  },
+  applyBtnText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  presetsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8
+  },
+  presetChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)'
+  },
+  presetText: {
+    color: Colors.text.secondary,
+    fontSize: 11
+  },
+  testBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+    borderWidth: 1
+  },
+  testSuccess: {
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: 'rgba(16, 185, 129, 0.3)'
+  },
+  testError: {
+    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    borderColor: 'rgba(239, 68, 68, 0.3)'
+  },
+  testInfo: {
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    borderColor: 'rgba(56, 189, 248, 0.3)'
+  },
+  testBannerText: {
+    color: Colors.text.primary,
+    fontSize: 11,
+    flex: 1
   },
   nodesList: {
     gap: 8
