@@ -18,4 +18,4 @@ mappls client secret
 YOUR_MAPPLS_CLIENT_SECRET
 
 mappls rest api key
-YOUR_MAPPLS_REST_API_KEY
+016cc398f80d551ad31ba077b38f5045

@@ -112,6 +112,12 @@ function getMapplsCredentials() {
     }
   }
 
+  // Serverless fallback default (e.g. Vercel deployment where .env is not packaged)
+  const DEFAULT_MAPPLS_REST_KEY = '016cc398f80d551ad31ba077b38f5045';
+  if (isPlaceholder(restApiKey) && isPlaceholder(clientId) && isPlaceholder(clientSecret)) {
+    restApiKey = DEFAULT_MAPPLS_REST_KEY;
+  }
+
   const hasOAuth = !isPlaceholder(clientId) && !isPlaceholder(clientSecret);
   const hasStaticKey = !isPlaceholder(restApiKey);
 
