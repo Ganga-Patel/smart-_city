@@ -105,3 +105,6 @@ $RECYCLE.BIN/
 *.sublime-workspace
 *.swp
 *.swo
+
+API firebase.txt
+API wheather and air quality.txt
