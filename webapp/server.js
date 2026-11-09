@@ -431,6 +431,37 @@ app.get('/api/location/weather', async (req, res) => {
 
 
 
+// Dedicated Sensor Monitoring Dashboard route
+app.get('/sensor-dashboard', (req, res) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.sendFile(path.join(__dirname, 'public', 'sensor-dashboard.html'));
+});
+
+// Dedicated Sensor Telemetry API endpoint
+app.get('/api/sensors', async (req, res) => {
+  try {
+    let fullRaw = null;
+    if (db) {
+      try {
+        const snap = await db.ref('/').once('value');
+        fullRaw = snap.val();
+      } catch (e) {}
+    }
+    if (!fullRaw) {
+      try {
+        const restRes = await fetch('https://smartcity-61fad-default-rtdb.firebaseio.com/.json');
+        if (restRes.ok) fullRaw = await restRes.json();
+      } catch (e) {}
+    }
+    const normalized = fullRaw ? smartcityService.normalizeFirebaseData(fullRaw) : await smartcityService.fetchFirebaseSensorData(db, 'https://smartcity-61fad-default-rtdb.firebaseio.com');
+    res.json({ success: true, sensors: normalized, raw: fullRaw, timestamp: Date.now() });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({

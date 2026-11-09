@@ -559,6 +559,8 @@ async function getUnifiedDashboardData(db) {
 
 module.exports = {
   getUnifiedDashboardData,
+  fetchFirebaseSensorData,
+  normalizeFirebaseData,
   readConfigFromTextFiles,
   computeAstronomy,
   FIXED_LOCATION

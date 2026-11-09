@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IoT Sensor Command Center • Smart City Telemetry Platform</title>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/logo/logo-dark-hd.png">
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .brand-logo-img {
+      background-image: url('/logo/logo-dark-square.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background-color: rgba(14, 165, 233, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    /* Enterprise Glassmorphism Cards */
+    .glass-card {
+      background: rgba(15, 23, 42, 0.72);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    .glass-card-interactive {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card-interactive:hover {
+      background: rgba(15, 23, 42, 0.88);
+      border-color: rgba(56, 189, 248, 0.3);
+      transform: translateY(-2px);
+      box-shadow: 0 16px 36px -12px rgba(14, 165, 233, 0.16);
+    }
+
+    /* Instant Executive Light Mode via CSS Inversion */
+    html.light-theme {
+      filter: invert(1) hue-rotate(180deg) contrast(1.15) saturate(1.1);
+      background-color: #f8fafc;
+    }
+    html.light-theme img,
+    html.light-theme canvas {
+      filter: invert(1) hue-rotate(180deg) contrast(0.85);
+    }
+    html.light-theme .brand-logo-img {
+      filter: invert(1) hue-rotate(180deg);
+      background-color: rgba(14, 165, 233, 0.05);
+      border-color: rgba(56, 189, 248, 0.3);
+    }
+    html.light-theme .text-slate-400,
+    html.light-theme .text-slate-500 {
+      color: #e2e8f0 !important;
+    }
+    html.light-theme .text-slate-300 {
+      color: #f8fafc !important;
+    }
+
+    /* Custom subtle scrollbars */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(51, 65, 85, 0.8);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 1);
+    }
+  </style>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+            },
+            dark: {
+              950: '#040711',
+              900: '#0a0f1d',
+              850: '#111728',
+              800: '#172033',
+              700: '#26344d'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-dark-950 text-slate-100 min-h-screen flex flex-col antialiased selection:bg-sky-500/30 selection:text-sky-200">
+
+  <!-- ================= TOP ENTERPRISE HEADER ================= -->
+  <header class="sticky top-0 z-40 border-b border-slate-800/80 bg-dark-900/85 backdrop-blur-2xl px-4 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+    
+    <!-- Left: Brand Emblem & Station Identity -->
+    <div class="flex items-center gap-3.5">
+      <div class="brand-logo-img shrink-0"></div>
+      <div>
+        <div class="flex items-center gap-2.5">
+          <h1 class="text-base font-extrabold tracking-tight text-white">Smart City IoT Telemetry</h1>
+          <span class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+            <span class="h-1.5 w-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+            <span>Station: Sector 4 Node</span>
+          </span>
+        </div>
+        <p class="text-xs text-slate-400 font-medium">Production Sensor Telemetry &bull; Real-Time Environmental Intelligence</p>
+      </div>
+    </div>
+
+    <!-- Right: Telemetry Health, Navigation & Controls -->
+    <div class="flex items-center gap-2.5 sm:gap-3">
+      
+      <!-- Live Protocol Status Pill -->
+      <div id="firebaseConnectionBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold shadow-sm">
+        <span class="relative flex h-2 w-2">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+        </span>
+        <span id="firebaseStatusText">Telemetry Live</span>
+      </div>
+
+      <!-- Sync Clock -->
+      <div class="hidden md:flex items-center gap-1.5 text-xs text-slate-400 font-mono">
+        <span class="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+        <span>Sync: <b id="lastSyncTimeText" class="text-slate-200">--:--:--</b></span>
+      </div>
+
+      <div class="h-5 w-px bg-slate-800 hidden sm:block"></div>
+
+      <!-- Return to City Dashboard -->
+      <a href="index.html" title="Switch to Weather, Air Quality &amp; Mobility Dashboard" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-dark-800/90 hover:bg-dark-700 text-slate-200 hover:text-white border border-slate-700/80 transition shadow-sm">
+        <i data-lucide="layout-dashboard" class="w-3.5 h-3.5 text-sky-400"></i>
+        <span>City Dashboard</span>
+      </a>
+
+      <!-- Theme Switcher -->
+      <button id="themeToggleBtn" title="Toggle Light / Dark Mode" class="p-2 rounded-xl bg-dark-800/90 border border-slate-700/80 text-slate-300 hover:text-white hover:border-slate-600 transition shadow-sm">
+        <i id="themeIcon" data-lucide="sun" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Manual Refresh Trigger -->
+      <button id="manualRefreshBtn" title="Sync Latest Snapshot" class="p-2 rounded-xl bg-dark-800/90 border border-slate-700/80 text-slate-300 hover:text-white hover:border-slate-600 transition shadow-sm">
+        <i id="refreshIcon" data-lucide="rotate-cw" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= ACTIVE CRITICAL HAZARD ALERT ================= -->
+  <div id="hazardAlertBanner" class="hidden bg-gradient-to-r from-rose-950/95 via-red-900/90 to-rose-950/95 border-b border-rose-500/50 px-6 py-3 flex items-center justify-between shadow-2xl animate-pulse">
+    <div class="flex items-center gap-3.5">
+      <div class="p-2 bg-rose-500/20 text-rose-300 rounded-xl border border-rose-500/30">
+        <i data-lucide="alert-octagon" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h4 id="alertBannerTitle" class="text-xs font-bold text-rose-100 uppercase tracking-wider">Hazard Detected</h4>
+        <p id="alertBannerMsg" class="text-xs text-rose-200/90">Critical threshold breached on monitored sensor.</p>
+      </div>
+    </div>
+    <button id="dismissAlertBtn" class="px-3.5 py-1.5 bg-rose-500/25 hover:bg-rose-500/40 text-rose-100 border border-rose-500/40 rounded-lg text-xs font-semibold transition">
+      Acknowledge Alert
+    </button>
+  </div>
+
+  <!-- ================= MAIN DASHBOARD BODY ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- ================= EXECUTIVE KPI SUMMARY BAR ================= -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      
+      <!-- KPI 1: Telemetry Stream Health -->
+      <div class="glass-card p-4 rounded-2xl flex items-center gap-3.5">
+        <div class="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+          <i data-lucide="radio" class="w-5 h-5"></i>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Stream Health</div>
+          <div id="statOverallHealth" class="text-sm font-extrabold text-emerald-400 truncate">100% Operational</div>
+          <div class="text-[10px] text-slate-400 font-mono">Zero Latency Drop</div>
+        </div>
+      </div>
+
+      <!-- KPI 2: Monitored Probes -->
+      <div class="glass-card p-4 rounded-2xl flex items-center gap-3.5">
+        <div class="p-2.5 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20 shrink-0">
+          <i data-lucide="cpu" class="w-5 h-5"></i>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Monitored Probes</div>
+          <div class="text-sm font-extrabold text-white">4 Online Sensors</div>
+          <div class="text-[10px] text-slate-400 font-mono">Microclimate &bull; Gas &bull; Rain</div>
+        </div>
+      </div>
+
+      <!-- KPI 3: Transmission Volume -->
+      <div class="glass-card p-4 rounded-2xl flex items-center gap-3.5">
+        <div class="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+          <i data-lucide="layers" class="w-5 h-5"></i>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Packets Ingested</div>
+          <div id="statPacketCount" class="text-sm font-extrabold font-mono text-white">0 Packets</div>
+          <div class="text-[10px] text-slate-400 font-mono">Real Ingestion Only</div>
+        </div>
+      </div>
+
+      <!-- KPI 4: Environmental Risk Rating -->
+      <div class="glass-card p-4 rounded-2xl flex items-center gap-3.5">
+        <div class="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+          <i data-lucide="shield-check" class="w-5 h-5"></i>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Environmental Safety</div>
+          <div id="statRiskRating" class="text-sm font-extrabold text-emerald-400">Nominal / Secure</div>
+          <div id="statAnomalyNotice" class="text-[10px] text-slate-400 font-mono">0 Anomalies Detected</div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= SECTION 1: PRIMARY SENSOR TELEMETRY CARDS ================= -->
+    <section>
+      <div class="flex items-center justify-between mb-3 px-1">
+        <div class="flex items-center gap-2">
+          <i data-lucide="activity" class="w-4 h-4 text-sky-400"></i>
+          <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Real-Time Sensor Telemetry Probes</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-mono text-slate-500">Live Hardware Stream</span>
+          <button id="tempUnitToggleBtn" title="Toggle Temperature Unit" class="text-[11px] font-mono text-sky-300 hover:text-white bg-dark-800/90 px-2.5 py-0.5 rounded-lg border border-slate-700/80 transition">
+            °C / °F
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- CARD 1: AMBIENT TEMPERATURE (DHT22 / DHT11) -->
+        <div class="glass-card glass-card-interactive p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden">
+          <div class="absolute -right-8 -top-8 w-28 h-28 bg-rose-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="p-2 rounded-xl bg-rose-500/15 text-rose-400 border border-rose-500/20">
+                  <i data-lucide="thermometer" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white tracking-tight">Ambient Temperature</div>
+                  <div class="text-[10px] text-slate-400 font-mono">High-Precision Ambient Sensor</div>
+                </div>
+              </div>
+              <span id="tempStatusBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Optimal
+              </span>
+            </div>
+
+            <!-- Value Display -->
+            <div class="flex items-baseline gap-1.5 my-2">
+              <span id="tempValue" class="text-4xl font-extrabold tracking-tight text-white font-mono">--</span>
+              <span id="tempUnit" class="text-base font-bold text-slate-400">°C</span>
+            </div>
+
+            <!-- Range Gauge Bar -->
+            <div class="space-y-1.5 my-3">
+              <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+                <span>Scale: 0°C</span>
+                <span id="tempGaugeMid">Comfort (20–30°C)</span>
+                <span>50°C</span>
+              </div>
+              <div class="w-full bg-dark-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                <div id="tempRangeBar" class="bg-gradient-to-r from-sky-400 via-emerald-400 to-rose-500 h-full rounded-full transition-all duration-700" style="width: 52%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+            <span>Session Min: <b id="tempMinVal" class="text-slate-200">--</b></span>
+            <span>Max: <b id="tempMaxVal" class="text-slate-200">--</b></span>
+          </div>
+        </div>
+
+        <!-- CARD 2: RELATIVE HUMIDITY (DHT22 / DHT11) -->
+        <div class="glass-card glass-card-interactive p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden">
+          <div class="absolute -right-8 -top-8 w-28 h-28 bg-sky-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="p-2 rounded-xl bg-sky-500/15 text-sky-400 border border-sky-500/20">
+                  <i data-lucide="droplets" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white tracking-tight">Relative Humidity</div>
+                  <div class="text-[10px] text-slate-400 font-mono">Atmospheric Moisture Sensor</div>
+                </div>
+              </div>
+              <span id="humidityStatusBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                Comfortable
+              </span>
+            </div>
+
+            <!-- Value Display -->
+            <div class="flex items-baseline gap-1.5 my-2">
+              <span id="humidityValue" class="text-4xl font-extrabold tracking-tight text-white font-mono">--</span>
+              <span class="text-base font-bold text-slate-400">%</span>
+            </div>
+
+            <!-- Humidity Progress Bar -->
+            <div class="space-y-1.5 my-3">
+              <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+                <span>0% (Dry)</span>
+                <span id="humidityTargetText">Optimal: 40–60%</span>
+                <span>100% (Sat.)</span>
+              </div>
+              <div class="w-full bg-dark-950 rounded-full h-2 overflow-hidden border border-slate-800">
+                <div id="humidityBar" class="bg-gradient-to-r from-sky-500 via-cyan-400 to-indigo-500 h-full rounded-full transition-all duration-700" style="width: 47%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+            <span>Session Min: <b id="humidityMinVal" class="text-slate-200">--</b></span>
+            <span>Max: <b id="humidityMaxVal" class="text-slate-200">--</b></span>
+          </div>
+        </div>
+
+        <!-- CARD 3: SURFACE PRECIPITATION (RAIN SENSOR) -->
+        <div class="glass-card glass-card-interactive p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden">
+          <div class="absolute -right-8 -top-8 w-28 h-28 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="p-2 rounded-xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/20">
+                  <i data-lucide="cloud-rain" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white tracking-tight">Precipitation Sensor</div>
+                  <div class="text-[10px] text-slate-400 font-mono">Surface Moisture Detector</div>
+                </div>
+              </div>
+              <span id="rainStatusBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Dry Surface
+              </span>
+            </div>
+
+            <!-- Value Display -->
+            <div class="flex items-center gap-3 my-3">
+              <div id="rainIconBox" class="p-3 rounded-2xl bg-dark-950 text-amber-400 border border-slate-800 flex items-center justify-center shrink-0">
+                <i id="rainStateIcon" data-lucide="sun" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <div id="rainStateTitle" class="text-xl font-extrabold text-white tracking-tight">Clear &amp; Dry</div>
+                <div id="rainStateDesc" class="text-xs text-slate-400">Zero precipitation detected</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+            <span>Condition: <b id="rainConditionText" class="text-emerald-400">Dry Ground</b></span>
+            <span>Safety: <b class="text-slate-200">Clear</b></span>
+          </div>
+        </div>
+
+        <!-- CARD 4: AIR PURITY & HAZARDOUS GAS (MQ-2 / MQ-135) -->
+        <div class="glass-card glass-card-interactive p-5 rounded-2xl flex flex-col justify-between relative overflow-hidden">
+          <div class="absolute -right-8 -top-8 w-28 h-28 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <div class="p-2 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                  <i data-lucide="wind" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white tracking-tight">Gas &amp; Air Safety</div>
+                  <div class="text-[10px] text-slate-400 font-mono">Air Safety &amp; Gas Sensor</div>
+                </div>
+              </div>
+              <span id="gasStatusBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Air Safe
+              </span>
+            </div>
+
+            <!-- Value Display -->
+            <div class="flex items-center gap-3 my-3">
+              <div id="gasIconBox" class="p-3 rounded-2xl bg-dark-950 text-emerald-400 border border-slate-800 flex items-center justify-center shrink-0">
+                <i id="gasStateIcon" data-lucide="shield-check" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <div id="gasStateTitle" class="text-xl font-extrabold text-white tracking-tight">Nominal / Clear</div>
+                <div id="gasStateDesc" class="text-xs text-slate-400">Hazardous gases below threshold</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400 font-mono">
+            <span>Combustibles: <b class="text-emerald-400">Safe</b></span>
+            <span>Smoke Level: <b class="text-slate-200">Normal</b></span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= SECTION 2: PRODUCTION-GRADE SENSOR ANALYSIS & TELEMETRY INSIGHTS ================= -->
+    <section class="glass-card p-5 sm:p-6 rounded-2xl space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-800/80">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
+            <i data-lucide="gauge" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white tracking-tight">Sensor Telemetry Analytics &amp; Anomaly Detection</h3>
+            <p class="text-xs text-slate-400">Continuous mathematical derivation computed strictly from live incoming sensor telemetry</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs font-mono text-slate-400">
+          <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+          <span>Analytics Engine: Active</span>
+        </div>
+      </div>
+
+      <!-- 4 Core Mathematical Analysis Insights -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <!-- Insight 1: Heat Index / Apparent RealFeel -->
+        <div class="p-4 rounded-xl bg-dark-950/70 border border-slate-800/90 flex flex-col justify-between">
+          <div>
+            <div class="text-[11px] font-semibold text-slate-400 flex items-center justify-between mb-1.5">
+              <span>Heat Index (Apparent)</span>
+              <span id="analysisHeatStatus" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400">Comfortable</span>
+            </div>
+            <div class="flex items-baseline gap-1 my-1">
+              <span id="analysisHeatIndexVal" class="text-2xl font-extrabold text-white font-mono">--</span>
+              <span class="text-xs text-slate-400 font-mono">°C</span>
+            </div>
+            <p id="analysisHeatDesc" class="text-[11px] text-slate-400 leading-relaxed mt-1">Calculated via Rothfusz model from temperature &amp; moisture.</p>
+          </div>
+          <div class="mt-3 pt-2.5 border-t border-slate-800/70 text-[10px] text-slate-500 font-mono flex justify-between">
+            <span>Thermal Variance</span>
+            <span id="analysisHeatDelta" class="text-slate-300">Nominal</span>
+          </div>
+        </div>
+
+        <!-- Insight 2: Dew Point -->
+        <div class="p-4 rounded-xl bg-dark-950/70 border border-slate-800/90 flex flex-col justify-between">
+          <div>
+            <div class="text-[11px] font-semibold text-slate-400 flex items-center justify-between mb-1.5">
+              <span>Atmospheric Dew Point</span>
+              <span id="analysisDewStatus" class="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/10 text-sky-400">Dry / Refreshing</span>
+            </div>
+            <div class="flex items-baseline gap-1 my-1">
+              <span id="analysisDewPointVal" class="text-2xl font-extrabold text-white font-mono">--</span>
+              <span class="text-xs text-slate-400 font-mono">°C</span>
+            </div>
+            <p id="analysisDewDesc" class="text-[11px] text-slate-400 leading-relaxed mt-1">Magnus-Tetens condensation threshold.</p>
+          </div>
+          <div class="mt-3 pt-2.5 border-t border-slate-800/70 text-[10px] text-slate-500 font-mono flex justify-between">
+            <span>Condensation Risk</span>
+            <span id="analysisDewRisk" class="text-emerald-400">Zero Risk</span>
+          </div>
+        </div>
+
+        <!-- Insight 3: Vapor Pressure Deficit (VPD) -->
+        <div class="p-4 rounded-xl bg-dark-950/70 border border-slate-800/90 flex flex-col justify-between">
+          <div>
+            <div class="text-[11px] font-semibold text-slate-400 flex items-center justify-between mb-1.5">
+              <span>Vapor Pressure Deficit</span>
+              <span id="analysisVpdStatus" class="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/10 text-indigo-400">Optimal (VPD)</span>
+            </div>
+            <div class="flex items-baseline gap-1 my-1">
+              <span id="analysisVpdVal" class="text-2xl font-extrabold text-white font-mono">--</span>
+              <span class="text-xs text-slate-400 font-mono">kPa</span>
+            </div>
+            <p id="analysisVpdDesc" class="text-[11px] text-slate-400 leading-relaxed mt-1">Atmospheric drying capacity &amp; moisture absorption rate.</p>
+          </div>
+          <div class="mt-3 pt-2.5 border-t border-slate-800/70 text-[10px] text-slate-500 font-mono flex justify-between">
+            <span>Moisture Gradient</span>
+            <span id="analysisVpdGrade" class="text-slate-300">Healthy Air</span>
+          </div>
+        </div>
+
+        <!-- Insight 4: Sensor Stability & Anomaly Flag -->
+        <div class="p-4 rounded-xl bg-dark-950/70 border border-slate-800/90 flex flex-col justify-between">
+          <div>
+            <div class="text-[11px] font-semibold text-slate-400 flex items-center justify-between mb-1.5">
+              <span>Telemetry Stability</span>
+              <span id="analysisStabilityStatus" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400">Stable</span>
+            </div>
+            <div class="flex items-baseline gap-1 my-1">
+              <span id="analysisStabilityVal" class="text-2xl font-extrabold text-white font-mono">99.8%</span>
+            </div>
+            <p id="analysisStabilityDesc" class="text-[11px] text-slate-400 leading-relaxed mt-1">Rolling standard deviation and rapid drift detection.</p>
+          </div>
+          <div class="mt-3 pt-2.5 border-t border-slate-800/70 text-[10px] text-slate-500 font-mono flex justify-between">
+            <span>Anomalies Flagged</span>
+            <span id="analysisAnomalyCount" class="text-emerald-400">0 Critical</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= SECTION 3: VISUAL CHARTS & HARDWARE PROBES ================= -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Dynamic Time-Series Telemetry Chart (2 Columns) -->
+      <div class="lg:col-span-2 glass-card p-5 sm:p-6 rounded-2xl flex flex-col justify-between">
+        <div>
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-4 pb-3 border-b border-slate-800/80">
+            <div class="flex items-center gap-2.5">
+              <div class="p-2 rounded-xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                <i data-lucide="line-chart" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-white tracking-tight">Atmospheric Telemetry Trend</h3>
+                <p class="text-xs text-slate-400">Chronological rolling progression streamed from physical sensors</p>
+              </div>
+            </div>
+
+            <!-- Chart Legends -->
+            <div class="flex items-center gap-2.5 text-xs font-mono">
+              <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-300 border border-rose-500/20">
+                <span class="h-2 w-2 rounded-full bg-rose-400"></span> Temp (<span id="chartTempUnitLabel">°C</span>)
+              </span>
+              <span class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-300 border border-sky-500/20">
+                <span class="h-2 w-2 rounded-full bg-sky-400"></span> Humidity (%)
+              </span>
+            </div>
+          </div>
+
+          <!-- Canvas Container -->
+          <div class="h-64 sm:h-72 w-full relative">
+            <canvas id="liveSensorChartCanvas"></canvas>
+            <div id="chartAwaitingOverlay" class="absolute inset-0 flex flex-col items-center justify-center bg-dark-950/70 backdrop-blur-sm rounded-xl text-center p-4 transition-opacity duration-500">
+              <i data-lucide="radio" class="w-8 h-8 text-sky-400 animate-pulse mb-2"></i>
+              <div class="text-sm font-bold text-white">Streaming Live Telemetry...</div>
+              <div class="text-xs text-slate-400 mt-1 max-w-sm font-mono">Real-time data packets are being recorded continuously from active sensors.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between text-xs text-slate-400 pt-3 mt-3 border-t border-slate-800/80 font-mono">
+          <span id="chartPointsCount">Recorded Points: 0</span>
+          <span>Rolling Window: 30 Points &bull; Resolution: Real-Time</span>
+        </div>
+      </div>
+
+      <!-- Perimeter & Hardware Status (1 Column) -->
+      <div class="glass-card p-5 sm:p-6 rounded-2xl flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-4">
+            <div class="flex items-center gap-2">
+              <div class="p-1.5 rounded-lg bg-indigo-500/15 text-indigo-400 border border-indigo-500/20">
+                <i data-lucide="shield" class="w-4 h-4"></i>
+              </div>
+              <h3 class="text-sm font-bold text-white tracking-tight">Perimeter &amp; Node Status</h3>
+            </div>
+            <span class="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Active Probing</span>
+          </div>
+
+          <div class="space-y-3">
+            
+            <!-- PIR Motion Probe -->
+            <div class="p-3.5 rounded-xl bg-dark-950/70 border border-slate-800/90 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="p-2 rounded-xl bg-dark-900 text-sky-400 border border-slate-700/80">
+                  <i data-lucide="eye" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">PIR Motion Detector</div>
+                  <div class="text-[11px] text-slate-400 font-mono">Infrared Passive Sensing</div>
+                </div>
+              </div>
+              <span id="pirStatusBadge" class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Clear
+              </span>
+            </div>
+
+            <!-- IR Proximity Obstacle Probe -->
+            <div class="p-3.5 rounded-xl bg-dark-950/70 border border-slate-800/90 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="p-2 rounded-xl bg-dark-900 text-amber-400 border border-slate-700/80">
+                  <i data-lucide="scan" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">Optical Proximity Sensor</div>
+                  <div class="text-[11px] text-slate-400 font-mono">Infrared Beam Guard</div>
+                </div>
+              </div>
+              <span id="irStatusBadge" class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Clear
+              </span>
+            </div>
+
+            <!-- Station Hardware Telemetry -->
+            <div class="p-3.5 rounded-xl bg-dark-950/70 border border-slate-800/90 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="p-2 rounded-xl bg-dark-900 text-cyan-400 border border-slate-700/80">
+                  <i data-lucide="map-pin" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-white">Anand Station GPS</div>
+                  <div class="text-[11px] text-slate-400 font-mono">22.5645° N, 72.9289° E</div>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                Locked
+              </span>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="p-3.5 rounded-xl bg-dark-950/90 border border-slate-800 text-xs text-slate-400 space-y-2 mt-4">
+          <div class="flex justify-between items-center font-mono">
+            <span>Edge Telemetry Station:</span>
+            <span class="text-white font-semibold">Sector 4 Urban Node</span>
+          </div>
+          <div class="flex justify-between items-center font-mono">
+            <span>Stream Protocol:</span>
+            <span class="text-emerald-400 font-semibold">Secure TLS Stream</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= SECTION 4: PRODUCTION AUDIT LOG & HISTORICAL TELEMETRY ================= -->
+    <section class="glass-card p-5 sm:p-6 rounded-2xl space-y-4">
+      
+      <!-- Table Header & Controls -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <i data-lucide="database" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white tracking-tight">Sensor Telemetry Event Log</h3>
+            <p class="text-xs text-slate-400">Live chronological audit stream of genuine hardware packets</p>
+          </div>
+        </div>
+
+        <!-- Controls: Export CSV, Clear Log -->
+        <div class="flex items-center gap-2">
+          <span id="historyRowCount" class="text-xs font-mono text-slate-400 px-3 py-1.5 rounded-xl bg-dark-950/80 border border-slate-800">
+            0 Records
+          </span>
+          <button id="exportCsvBtn" title="Download historical telemetry as CSV" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-dark-800 hover:bg-dark-700 text-slate-200 hover:text-white border border-slate-700 transition shadow-sm">
+            <i data-lucide="download" class="w-3.5 h-3.5 text-sky-400"></i>
+            <span>Export CSV</span>
+          </button>
+          <button id="clearHistoryBtn" title="Reset table history" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-dark-800 hover:bg-rose-950/50 text-slate-400 hover:text-rose-300 border border-slate-700 hover:border-rose-700/50 transition">
+            Clear Log
+          </button>
+        </div>
+      </div>
+
+      <!-- Enterprise Table Container -->
+      <div class="overflow-x-auto rounded-xl border border-slate-800/80">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-dark-950/90 text-slate-400 uppercase tracking-wider font-mono text-[10px] border-b border-slate-800">
+              <th class="py-3 px-4">Event Timestamp</th>
+              <th class="py-3 px-4">Monitored Station</th>
+              <th class="py-3 px-4">Temperature</th>
+              <th class="py-3 px-4">Relative Humidity</th>
+              <th class="py-3 px-4">Precipitation</th>
+              <th class="py-3 px-4">Gas / Air Safety</th>
+              <th class="py-3 px-4 text-right">Data Ingestion</th>
+            </tr>
+          </thead>
+          <tbody id="historyTableBody" class="divide-y divide-slate-800/60 font-mono">
+            <tr id="emptyTablePlaceholder">
+              <td colspan="7" class="py-8 text-center text-slate-500 font-sans">
+                <i data-lucide="inbox" class="w-6 h-6 mx-auto mb-2 text-slate-600"></i>
+                <div>Awaiting real-time telemetry packets...</div>
+                <div class="text-[11px] text-slate-600 mt-0.5">Readings append automatically as environmental sensors broadcast data.</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================= PRODUCTION FOOTER ================= -->
+  <footer class="border-t border-slate-800/80 bg-dark-900/60 backdrop-blur px-6 py-4 mt-auto text-xs text-slate-500 flex flex-wrap items-center justify-between gap-4">
+    <div class="flex items-center gap-2 font-mono">
+      <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+      <span>Telemetry Stream: <span class="text-emerald-400 font-semibold">Active &bull; Nominal</span></span>
+      <span class="text-slate-700">|</span>
+      <span>Sensors: <span class="text-slate-400 font-medium">Temperature &bull; Humidity &bull; Precipitation &bull; Air Quality</span></span>
+    </div>
+    <div class="text-slate-400">
+      Smart City IoT Industrial Telemetry Platform &copy; 2026 &bull; Production Ready
+    </div>
+  </footer>
+
+  <!-- Controller Script -->
+  <script type="module" src="js/sensor-dashboard.js"></script>
+
+</body>
+</html>

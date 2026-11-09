@@ -159,7 +159,7 @@ class DashboardApp {
         rainIconContainer.innerHTML = '<i data-lucide="sun" class="w-6 h-6 text-amber-400"></i>';
         rainIconContainer.className = 'p-2.5 rounded-xl bg-slate-800/80 text-slate-300 border border-slate-700';
       }
-      if (rainRawValue) rainRawValue.textContent = `Raw Pin: ${data.rainRaw ?? 1}`;
+      if (rainRawValue) rainRawValue.textContent = data.rainDetected ? 'Moisture Active' : 'Surface Dry';
     }
 
     // 4. Gas & Air Quality
