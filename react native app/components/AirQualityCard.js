@@ -4,51 +4,78 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 
 export default function AirQualityCard({ airQuality }) {
-  const aqi = airQuality?.aqi ?? 78;
+  const aqi = airQuality?.aqi ?? 81;
   const status = airQuality?.status || 'Moderate';
-  const pm25 = airQuality?.pm25 ?? 32.4;
-  const pm10 = airQuality?.pm10 ?? 49.7;
-  const no2 = airQuality?.no2 ?? 3.3;
-  const o3 = airQuality?.o3 ?? 155;
+  const pm25 = airQuality?.pm25 ?? 33.8;
+  const pm10 = airQuality?.pm10 ?? 41.7;
+  const no2 = airQuality?.no2 ?? 11.1;
+  const o3 = airQuality?.o3 ?? 137;
+  const co = airQuality?.co ?? 478;
+  const so2 = airQuality?.so2 ?? 20.9;
 
-  // Determine status color
+  // Determine status color & theme
   const getAqiTheme = (score) => {
-    if (score <= 50) return { color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.3)' };
-    if (score <= 100) return { color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.3)' };
-    if (score <= 150) return { color: '#f97316', bg: 'rgba(249, 115, 22, 0.15)', border: 'rgba(249, 115, 22, 0.3)' };
-    return { color: '#ef4444', bg: 'rgba(239, 68, 68, 0.15)', border: 'rgba(239, 68, 68, 0.3)' };
+    if (score <= 50) {
+      return { 
+        color: '#10b981', 
+        bg: 'rgba(16, 185, 129, 0.15)', 
+        border: 'rgba(16, 185, 129, 0.3)',
+        advisory: 'Air quality is satisfactory. Ideal for outdoor activity.'
+      };
+    }
+    if (score <= 100) {
+      return { 
+        color: '#f59e0b', 
+        bg: 'rgba(245, 158, 11, 0.15)', 
+        border: 'rgba(245, 158, 11, 0.3)',
+        advisory: 'Acceptable air quality. Sensitive individuals should monitor.'
+      };
+    }
+    if (score <= 150) {
+      return { 
+        color: '#f97316', 
+        bg: 'rgba(249, 115, 22, 0.15)', 
+        border: 'rgba(249, 115, 22, 0.3)',
+        advisory: 'Unhealthy for sensitive groups. Reduce prolonged exertion.'
+      };
+    }
+    return { 
+      color: '#ef4444', 
+      bg: 'rgba(239, 68, 68, 0.15)', 
+      border: 'rgba(239, 68, 68, 0.3)',
+      advisory: 'Health alert: increased risk of biological health effects.'
+    };
   };
 
   const theme = getAqiTheme(aqi);
 
   return (
     <View style={styles.container}>
+      {/* Header */}
       <View style={styles.headerRow}>
         <View style={[styles.headerIcon, { backgroundColor: theme.bg }]}>
           <MaterialCommunityIcons name="air-filter" size={18} color={theme.color} />
         </View>
         <View style={styles.titleWrapper}>
-          <Text style={styles.headerTitle}>Anand Air Quality (AQI)</Text>
-          <Text style={styles.headerSubtitle}>EPA / NAAQS Pollution Index</Text>
+          <Text style={styles.headerTitle}>Urban Air Quality Index</Text>
+          <Text style={styles.headerSubtitle}>EPA / NAAQS Comprehensive Scale</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: theme.bg, borderColor: theme.border }]}>
           <Text style={[styles.statusBadgeText, { color: theme.color }]}>{status}</Text>
         </View>
       </View>
 
-      {/* Main AQI Score Banner */}
+      {/* Main AQI Score Highlight */}
       <View style={styles.scoreRow}>
         <View>
-          <Text style={styles.aqiLabel}>Air Quality Index</Text>
+          <Text style={styles.aqiLabel}>US AQI SCORE</Text>
           <View style={styles.scoreValueRow}>
             <Text style={[styles.scoreValue, { color: theme.color }]}>{aqi}</Text>
             <Text style={styles.scoreScale}>/ 500 US AQI</Text>
           </View>
         </View>
         <View style={styles.advisoryBlock}>
-          <Text style={styles.advisoryText}>
-            {aqi <= 50 ? 'Air quality is satisfactory.' : aqi <= 100 ? 'Acceptable air quality.' : 'Sensitive groups take caution.'}
-          </Text>
+          <Text style={styles.advisoryText}>{theme.advisory}</Text>
         </View>
       </View>
 
@@ -71,7 +98,7 @@ export default function AirQualityCard({ airQuality }) {
         </View>
 
         <View style={styles.gridItem}>
-          <Text style={styles.itemLabel}>Nitrogen Dioxide (NO₂)</Text>
+          <Text style={styles.itemLabel}>Nitrogen (NO₂)</Text>
           <View style={styles.valueRow}>
             <Text style={styles.itemValue}>{no2}</Text>
             <Text style={styles.itemUnit}>ppb</Text>
@@ -83,6 +110,22 @@ export default function AirQualityCard({ airQuality }) {
           <View style={styles.valueRow}>
             <Text style={styles.itemValue}>{o3}</Text>
             <Text style={styles.itemUnit}>µg/m³</Text>
+          </View>
+        </View>
+
+        <View style={styles.gridItem}>
+          <Text style={styles.itemLabel}>Carbon (CO)</Text>
+          <View style={styles.valueRow}>
+            <Text style={styles.itemValue}>{co}</Text>
+            <Text style={styles.itemUnit}>µg/m³</Text>
+          </View>
+        </View>
+
+        <View style={styles.gridItem}>
+          <Text style={styles.itemLabel}>Sulfur (SO₂)</Text>
+          <View style={styles.valueRow}>
+            <Text style={styles.itemValue}>{so2}</Text>
+            <Text style={styles.itemUnit}>ppb</Text>
           </View>
         </View>
       </View>
@@ -102,27 +145,26 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14
+    marginBottom: 14,
+    gap: 10
   },
   headerIcon: {
     width: 32,
     height: 32,
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10
+    justifyContent: 'center'
   },
   titleWrapper: {
     flex: 1
   },
   headerTitle: {
-    color: Colors.text.primary,
+    color: '#f8fafc',
     fontSize: 14,
-    fontWeight: '700',
-    letterSpacing: 0.3
+    fontWeight: '700'
   },
   headerSubtitle: {
-    color: Colors.text.muted,
+    color: '#94a3b8',
     fontSize: 10,
     marginTop: 1
   },
@@ -133,49 +175,48 @@ const styles = StyleSheet.create({
     borderWidth: 1
   },
   statusBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700'
   },
   scoreRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: Colors.surfaceHighlight,
-    padding: 14,
+    justifyContent: 'space-between',
+    backgroundColor: '#070b14',
     borderRadius: 12,
-    marginBottom: 12,
+    padding: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)'
+    borderColor: 'rgba(255, 255, 255, 0.05)',
+    marginBottom: 12,
+    gap: 12
   },
   aqiLabel: {
-    color: Colors.text.muted,
-    fontSize: 10,
-    fontWeight: '600',
-    textTransform: 'uppercase'
+    color: '#64748b',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.5
   },
   scoreValueRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 6,
+    gap: 4,
     marginTop: 2
   },
   scoreValue: {
     fontSize: 32,
-    fontWeight: '900',
-    fontFamily: 'monospace'
+    fontWeight: '800'
   },
   scoreScale: {
-    color: Colors.text.muted,
-    fontSize: 12,
-    fontWeight: '600'
+    color: '#64748b',
+    fontSize: 11
   },
   advisoryBlock: {
-    maxWidth: 150
+    flex: 1
   },
   advisoryText: {
-    color: Colors.text.secondary,
-    fontSize: 11,
-    textAlign: 'right'
+    color: '#94a3b8',
+    fontSize: 10,
+    lineHeight: 14
   },
   grid: {
     flexDirection: 'row',
@@ -183,34 +224,32 @@ const styles = StyleSheet.create({
     gap: 8
   },
   gridItem: {
-    flexBasis: '48%',
-    flexGrow: 1,
-    padding: 10,
-    borderRadius: 12,
-    backgroundColor: Colors.surfaceHighlight,
+    flex: 1,
+    minWidth: '30%',
+    backgroundColor: '#070b14',
+    borderRadius: 10,
+    padding: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)'
+    borderColor: 'rgba(255, 255, 255, 0.05)'
   },
   itemLabel: {
-    color: Colors.text.muted,
-    fontSize: 10,
-    fontWeight: '600',
-    textTransform: 'uppercase'
+    color: '#64748b',
+    fontSize: 9,
+    fontWeight: '700'
   },
   valueRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 4,
-    marginTop: 4
+    gap: 3,
+    marginTop: 3
   },
   itemValue: {
-    color: Colors.text.primary,
-    fontSize: 15,
+    color: '#f8fafc',
+    fontSize: 14,
     fontWeight: '800'
   },
   itemUnit: {
-    color: Colors.text.secondary,
-    fontSize: 10,
-    fontWeight: '500'
+    color: '#64748b',
+    fontSize: 9
   }
 });

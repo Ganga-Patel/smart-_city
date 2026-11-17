@@ -2,7 +2,20 @@
 import { API_CONFIG } from '../constants/Config';
 import { Platform } from 'react-native';
 
-let activeBaseUrl = Platform.OS === 'web' ? API_CONFIG.localUrl : API_CONFIG.lanUrl;
+function resolveInitialBaseUrl() {
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.origin) {
+    const origin = window.location.origin;
+    // If running on Metro bundler web preview (port 8081 or 19006), target local Express backend on port 3000
+    if (origin.includes(':8081') || origin.includes(':19006')) {
+      return API_CONFIG.localUrl;
+    }
+    // If deployed on Vercel or custom production domain, use same origin
+    return origin;
+  }
+  return API_CONFIG.lanUrl;
+}
+
+let activeBaseUrl = resolveInitialBaseUrl();
 
 export function setActiveBaseUrl(url) {
   if (url && typeof url === 'string') {

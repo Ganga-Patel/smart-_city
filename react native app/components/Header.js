@@ -1,51 +1,76 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from '../constants/Colors';
 
-export default function Header({ activeNode, isConnected, onSelectNode, isDemoMode, onToggleDemo }) {
+export default function Header({ 
+  isConnected, 
+  lastSyncTime, 
+  onRefresh, 
+  isFahrenheit, 
+  onToggleUnit 
+}) {
+  const timeStr = lastSyncTime 
+    ? new Date(lastSyncTime).toLocaleTimeString('en-GB') 
+    : new Date().toLocaleTimeString('en-GB');
+
   return (
     <View style={styles.header}>
-      {/* Brand & Subtitle */}
+      {/* Left: Brand Emblem & Station Identity */}
       <View style={styles.brandRow}>
         <View style={styles.logoBox}>
-          <MaterialCommunityIcons name="city-variant" size={22} color={Colors.brand.sky} />
+          <MaterialCommunityIcons name="cpu-64-bit" size={20} color="#38bdf8" />
         </View>
-        <View>
+        <View style={styles.titleColumn}>
           <View style={styles.titleRow}>
-            <Text style={styles.title}>Smart City IoT</Text>
-            <View style={styles.versionBadge}>
-              <Text style={styles.versionText}>v1.0</Text>
+            <Text style={styles.titleText}>Smart City Sensor Dashboard</Text>
+            <View style={styles.stationPill}>
+              <View style={styles.pulseDotCyan} />
+              <Text style={styles.stationPillText}>Sector 4 Node</Text>
             </View>
           </View>
-          <Text style={styles.subtitle}>Mobile Telemetry Command</Text>
+          <Text style={styles.subtitleText}>
+            Real-Time Environmental Telemetry &bull; Minimal Command Center
+          </Text>
         </View>
       </View>
 
-      {/* Right Actions: Connection Badge & Demo Mode */}
+      {/* Right Controls: Live Protocol Status, Clock & Actions */}
       <View style={styles.actionsRow}>
-        <TouchableOpacity 
-          style={[styles.demoBtn, isDemoMode && styles.demoBtnActive]} 
-          onPress={onToggleDemo}
-          activeOpacity={0.7}
-        >
-          <MaterialCommunityIcons 
-            name={isDemoMode ? "play-circle" : "play"} 
-            size={14} 
-            color={isDemoMode ? Colors.status.success : Colors.status.warning} 
-          />
-          <Text style={[styles.demoText, isDemoMode && { color: Colors.status.success }]}>
-            {isDemoMode ? 'Demo' : 'Feed'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Cloud Connection Badge */}
-        <View style={[styles.connBadge, isConnected ? styles.connLive : styles.connOffline]}>
-          <View style={[styles.dot, { backgroundColor: isConnected ? Colors.status.success : Colors.status.danger }]} />
-          <Text style={[styles.connText, { color: isConnected ? Colors.status.success : Colors.status.danger }]}>
-            {isConnected ? 'Live' : 'Offline'}
+        {/* Live Status Pill */}
+        <View style={[styles.statusBadge, isConnected ? styles.statusBadgeLive : styles.statusBadgeOffline]}>
+          <View style={[styles.pulseDot, { backgroundColor: isConnected ? '#10b981' : '#ef4444' }]} />
+          <Text style={[styles.statusText, { color: isConnected ? '#10b981' : '#ef4444' }]}>
+            {isConnected ? 'Live Connected' : 'Offline'}
           </Text>
         </View>
+
+        {/* Updated Clock Pill */}
+        <View style={styles.clockPill}>
+          <MaterialCommunityIcons name="clock-outline" size={11} color="#64748b" />
+          <Text style={styles.clockText}>Updated: <Text style={styles.clockBold}>{timeStr}</Text></Text>
+        </View>
+
+        {/* Unit Toggle Button */}
+        {onToggleUnit && (
+          <TouchableOpacity 
+            style={styles.actionBtn} 
+            onPress={onToggleUnit}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.actionBtnText}>{isFahrenheit ? '°F' : '°C'}</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Manual Refresh Trigger */}
+        {onRefresh && (
+          <TouchableOpacity 
+            style={styles.iconBtn} 
+            onPress={onRefresh}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="sync" size={14} color="#94a3b8" />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -54,14 +79,14 @@ export default function Header({ activeNode, isConnected, onSelectNode, isDemoMo
 const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-    backgroundColor: Colors.surface,
+    paddingTop: 10,
+    paddingBottom: 10,
+    backgroundColor: '#0f172a',
     borderBottomWidth: 1,
-    borderBottomColor: Colors.surfaceBorder,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between'
+    borderBottomColor: 'rgba(51, 65, 85, 0.8)',
+    flexDirection: 'column',
+    gap: 8,
+    zIndex: 10
   },
   brandRow: {
     flexDirection: 'row',
@@ -69,92 +94,130 @@ const styles = StyleSheet.create({
     gap: 10
   },
   logoBox: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: 10,
-    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    backgroundColor: 'rgba(14, 165, 233, 0.1)',
     borderWidth: 1,
     borderColor: 'rgba(56, 189, 248, 0.25)',
     alignItems: 'center',
     justifyContent: 'center'
   },
+  titleColumn: {
+    flex: 1
+  },
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6
+    gap: 6,
+    flexWrap: 'wrap'
   },
-  title: {
-    color: Colors.text.primary,
-    fontSize: 16,
-    fontWeight: '700'
+  titleText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: -0.2
   },
-  versionBadge: {
+  stationPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 6,
     paddingVertical: 1,
-    borderRadius: 8,
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+    borderRadius: 12,
+    backgroundColor: 'rgba(14, 165, 233, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.3)'
+    borderColor: 'rgba(56, 189, 248, 0.25)'
   },
-  versionText: {
-    color: Colors.brand.sky,
+  pulseDotCyan: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#38bdf8'
+  },
+  stationPillText: {
+    color: '#38bdf8',
     fontSize: 9,
-    fontWeight: '700'
+    fontWeight: '700',
+    fontFamily: 'monospace'
   },
-  subtitle: {
-    color: Colors.text.muted,
+  subtitleText: {
+    color: '#94a3b8',
     fontSize: 10,
-    fontWeight: '500'
+    fontWeight: '500',
+    marginTop: 1
   },
   actionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8
+    justifyContent: 'space-between',
+    paddingTop: 4,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(51, 65, 85, 0.4)'
   },
-  demoBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: Colors.surfaceHighlight,
-    borderWidth: 1,
-    borderColor: Colors.surfaceBorder
-  },
-  demoBtnActive: {
-    backgroundColor: Colors.status.successBg,
-    borderColor: Colors.status.successBorder
-  },
-  demoText: {
-    color: Colors.text.secondary,
-    fontSize: 11,
-    fontWeight: '600'
-  },
-  connBadge: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     paddingHorizontal: 8,
-    paddingVertical: 5,
+    paddingVertical: 3,
     borderRadius: 8,
     borderWidth: 1
   },
-  connLive: {
-    backgroundColor: Colors.status.successBg,
-    borderColor: Colors.status.successBorder
+  statusBadgeLive: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderColor: 'rgba(16, 185, 129, 0.25)'
   },
-  connOffline: {
-    backgroundColor: Colors.status.dangerBg,
-    borderColor: Colors.status.dangerBorder
+  statusBadgeOffline: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: 'rgba(239, 68, 68, 0.25)'
   },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3
+  pulseDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5
   },
-  connText: {
-    fontSize: 11,
-    fontWeight: '600'
+  statusText: {
+    fontSize: 10,
+    fontWeight: '700',
+    fontFamily: 'monospace'
+  },
+  clockPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3
+  },
+  clockText: {
+    color: '#64748b',
+    fontSize: 10,
+    fontFamily: 'monospace'
+  },
+  clockBold: {
+    color: '#e2e8f0',
+    fontWeight: '700'
+  },
+  actionBtn: {
+    backgroundColor: '#1e293b',
+    borderWidth: 1,
+    borderColor: '#334155',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6
+  },
+  actionBtnText: {
+    color: '#38bdf8',
+    fontSize: 10,
+    fontFamily: 'monospace',
+    fontWeight: '700'
+  },
+  iconBtn: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    backgroundColor: '#1e293b',
+    borderWidth: 1,
+    borderColor: '#334155',
+    alignItems: 'center',
+    justifyContent: 'center'
   }
 });

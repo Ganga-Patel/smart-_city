@@ -18,6 +18,7 @@ export default function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isFahrenheit, setIsFahrenheit] = useState(false);
 
   // Live Telemetry & History State
   const [telemetry, setTelemetry] = useState(normalizeRawTelemetry(null, 'smartcity'));
@@ -28,8 +29,8 @@ export default function App() {
   
   // Real-time Event Audit Logs
   const [logs, setLogs] = useState([
-    { time: '16:00:00', tag: 'SYS', message: 'Smart City Mobile App started.' },
-    { time: '16:00:02', tag: 'NET', message: 'Connecting to Firebase Realtime Database...' }
+    { time: '16:00:00', tag: 'SYS', message: 'Smart City Sensor Dashboard started.' },
+    { time: '16:00:02', tag: 'NET', message: 'Connecting to Realtime Telemetry Stream...' }
   ]);
 
   const demoIntervalRef = useRef(null);
@@ -84,99 +85,52 @@ export default function App() {
   const handleIncomingTelemetry = (data) => {
     setTelemetry(data);
 
-    // Update rolling history buffer (keep last 20)
+    // Update rolling history buffer (keep last 200 actual readings for 12h analysis)
     setHistory(prev => {
       const updated = [...prev, {
         temperature: data.temperature,
         humidity: data.humidity,
         gasPpm: data.gasPpm,
-        timestamp: data.timestamp
+        isGasAlert: Boolean(data.gasAlert),
+        isRaining: Boolean(data.rainDetected),
+        timestamp: data.timestamp || Date.now()
       }];
-      return updated.slice(-20);
+      return updated.slice(-200);
     });
 
     // Evaluate safety alerts
     const { allAlerts, activeBannerAlert: bannerAlert } = evaluateTelemetryAlerts(
       data,
-      activeAlerts,
       acknowledgedKeys
     );
-
     setActiveAlerts(allAlerts);
     setActiveBannerAlert(bannerAlert);
   };
 
-  // Demo Feed Simulator
-  const toggleDemoMode = () => {
-    const nextState = !isDemoMode;
-    setIsDemoMode(nextState);
-
-    if (nextState) {
-      logEvent('SIM', 'Demo Simulation Feed STARTED.');
-      let tick = 0;
-      demoIntervalRef.current = setInterval(() => {
-        tick++;
-        const mockData = {
-          temperature: +(27 + Math.sin(tick * 0.4) * 4 + (Math.random() * 0.6 - 0.3)).toFixed(1),
-          humidity: +(60 + Math.cos(tick * 0.3) * 12 + (Math.random() * 2 - 1)).toFixed(1),
-          rainDetected: (tick % 12 === 0 || tick % 12 === 1),
-          rainRaw: (tick % 12 === 0 || tick % 12 === 1) ? 0 : 1,
-          gasPpm: +(120 + Math.abs(Math.sin(tick * 0.2)) * 180 + (tick % 18 === 0 ? 260 : 0)).toFixed(0),
-          gasRaw: 140,
-          gasAlert: (tick % 18 === 0),
-          pirMotion: (tick % 8 === 0),
-          irObstacle: (tick % 10 === 0),
-          reedLocked: true,
-          water: {
-            ph: +(7.2 + Math.sin(tick * 0.1) * 0.3).toFixed(2),
-            tds: +(140 + Math.cos(tick * 0.1) * 15).toFixed(0),
-            turbidity: +(0.8 + Math.sin(tick * 0.2) * 0.4).toFixed(1),
-            do: +(8.1 + Math.cos(tick * 0.2) * 0.5).toFixed(1)
-          },
-          weather: {
-            windSpeed: +(12 + Math.sin(tick * 0.5) * 6).toFixed(1),
-            windDir: ['N', 'NE', 'ENE', 'E', 'SE', 'S'][tick % 6],
-            lux: Math.round(750 + Math.sin(tick * 0.2) * 150),
-            pressure: Math.round(1012 + Math.cos(tick * 0.1) * 3)
-          },
-          timestamp: Date.now(),
-          sourceNode: 'simulation_node'
-        };
-
-        handleIncomingTelemetry(mockData);
-      }, 3000);
-    } else {
-      if (demoIntervalRef.current) clearInterval(demoIntervalRef.current);
-      logEvent('SIM', 'Demo Simulation Feed STOPPED.');
-    }
-  };
-
-  // Acknowledge hazard alert
-  const handleAcknowledgeAlert = (alertId) => {
-    setAcknowledgedKeys(prev => new Set(prev).add(alertId));
-    setActiveBannerAlert(null);
-    logEvent('ACK', `Hazard alert [${alertId}] acknowledged.`);
-  };
-
-  // Clear audit log
-  const handleClearLogs = () => {
-    setLogs([{ time: new Date().toLocaleTimeString('en-GB'), tag: 'LOG', message: 'Audit log cleared.' }]);
-  };
-
-  // Pull to refresh action
+  // Manual pull-to-refresh
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    logEvent('NET', 'Refreshing live WebApp & Vercel telemetry stream...');
+    logEvent('USR', 'Manual telemetry refresh triggered.');
     try {
       const data = await fetchUnifiedDashboardData();
       handleIncomingTelemetry(data);
       setIsConnected(true);
-      logEvent('NET', `Synchronized with ${data.location || 'WebApp'}.`);
     } catch (err) {
-      logEvent('NET', `Refresh failed: ${err.message}`);
+      logEvent('ERR', `Manual sync failed: ${err.message}`);
     } finally {
       setIsRefreshing(false);
     }
+  };
+
+  const handleAcknowledgeAlert = (alertKey) => {
+    setAcknowledgedKeys(prev => new Set([...prev, alertKey]));
+    if (activeBannerAlert && activeBannerAlert.id === alertKey) {
+      setActiveBannerAlert(null);
+    }
+  };
+
+  const handleClearLogs = () => {
+    setLogs([]);
   };
 
   // Render current tab content
@@ -199,7 +153,7 @@ export default function App() {
             activeNode={activeNode} 
             onSelectNode={setActiveNode} 
             isDemoMode={isDemoMode} 
-            onToggleDemo={toggleDemoMode} 
+            onToggleDemo={() => setIsDemoMode(prev => !prev)} 
             isConnected={isConnected} 
             onSyncNow={handleRefresh}
           />
@@ -209,12 +163,10 @@ export default function App() {
           <DashboardScreen 
             telemetry={telemetry} 
             history={history} 
-            activeAlert={activeBannerAlert} 
-            logs={logs} 
-            onAcknowledgeAlert={handleAcknowledgeAlert} 
-            onClearLogs={handleClearLogs} 
             onRefresh={handleRefresh} 
-            isRefreshing={isRefreshing} 
+            isRefreshing={isRefreshing}
+            isFahrenheit={isFahrenheit}
+            onToggleUnit={() => setIsFahrenheit(prev => !prev)}
           />
         );
     }
@@ -224,13 +176,13 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
-      {/* Top Header */}
+      {/* Top Header matching sensor-dashboard.html */}
       <Header 
-        activeNode={activeNode} 
         isConnected={isConnected} 
-        onSelectNode={setActiveNode} 
-        isDemoMode={isDemoMode} 
-        onToggleDemo={toggleDemoMode} 
+        lastSyncTime={telemetry?.timestamp}
+        onRefresh={handleRefresh}
+        isFahrenheit={isFahrenheit}
+        onToggleUnit={() => setIsFahrenheit(prev => !prev)}
       />
 
       {/* Main Screen Content */}
@@ -240,23 +192,23 @@ export default function App() {
 
       {/* Bottom Navigation Bar */}
       <View style={styles.tabBar}>
-        {/* 1. Dashboard Tab */}
+        {/* 1. Sensor Dashboard Tab */}
         <TouchableOpacity 
           style={styles.tabItem} 
           onPress={() => setActiveTab('dashboard')}
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons 
-            name={activeTab === 'dashboard' ? 'view-dashboard' : 'view-dashboard-outline'} 
+            name={activeTab === 'dashboard' ? 'cpu-64-bit' : 'cpu-64-bit'} 
             size={22} 
             color={activeTab === 'dashboard' ? Colors.brand.sky : Colors.text.muted} 
           />
           <Text style={[styles.tabLabel, activeTab === 'dashboard' && styles.tabLabelActive]}>
-            Dashboard
+            Sensors
           </Text>
         </TouchableOpacity>
 
-        {/* 2. Analytics Tab */}
+        {/* 2. 12h Analytics Tab */}
         <TouchableOpacity 
           style={styles.tabItem} 
           onPress={() => setActiveTab('analytics')}
@@ -272,7 +224,7 @@ export default function App() {
           </Text>
         </TouchableOpacity>
 
-        {/* 3. Alerts Tab */}
+        {/* 3. Safety Alerts Tab */}
         <TouchableOpacity 
           style={styles.tabItem} 
           onPress={() => setActiveTab('alerts')}
@@ -321,9 +273,9 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: Colors.surface,
+    backgroundColor: '#0f172a',
     borderTopWidth: 1,
-    borderTopColor: Colors.surfaceBorder,
+    borderTopColor: 'rgba(51, 65, 85, 0.6)',
     paddingVertical: 8,
     paddingBottom: 12,
     justifyContent: 'space-around'
@@ -335,21 +287,22 @@ const styles = StyleSheet.create({
     gap: 3
   },
   tabLabel: {
-    color: Colors.text.muted,
+    color: '#64748b',
     fontSize: 10,
-    fontWeight: '600'
+    fontWeight: '600',
+    fontFamily: 'monospace'
   },
   tabLabelActive: {
-    color: Colors.brand.sky,
-    fontWeight: '700'
+    color: '#38bdf8',
+    fontWeight: '800'
   },
   alertBadgeDot: {
     position: 'absolute',
     top: -2,
     right: -2,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.status.danger
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#ef4444'
   }
 });

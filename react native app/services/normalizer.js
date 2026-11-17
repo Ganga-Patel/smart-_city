@@ -34,12 +34,12 @@ export function normalizeRawTelemetry(raw, sourcePath) {
       normalized.rainDetected = (normalized.rainRaw === 0);
     }
 
-    // MQ2 Gas sensor
+    // MQ2 Gas sensor (DO: 0 = Gas alert, 1 = Normal ambient air)
     if (raw.MQ2) {
       const val = parseInt(raw.MQ2.value);
-      normalized.gasRaw = isNaN(val) ? 0 : val;
-      normalized.gasPpm = normalized.gasRaw <= 1 ? (normalized.gasRaw === 1 ? 480 : 120) : normalized.gasRaw;
-      normalized.gasAlert = normalized.gasPpm >= 300 || normalized.gasRaw === 1;
+      normalized.gasRaw = isNaN(val) ? 1 : val;
+      normalized.gasPpm = normalized.gasRaw <= 1 ? (normalized.gasRaw === 0 ? 480 : 120) : normalized.gasRaw;
+      normalized.gasAlert = normalized.gasPpm >= 300 || normalized.gasRaw === 0;
     }
 
     // PIR & IR if available

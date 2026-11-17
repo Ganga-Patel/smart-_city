@@ -8,9 +8,16 @@ export default function SecurityMatrix({ pirMotion, irObstacle, reedLocked = tru
     <View style={styles.container}>
       <View style={styles.headerRow}>
         <View style={styles.headerIcon}>
-          <MaterialCommunityIcons name="shield-alert" size={18} color={Colors.brand.sky} />
+          <MaterialCommunityIcons name="shield-check" size={18} color="#38bdf8" />
         </View>
-        <Text style={styles.headerTitle}>Security & Surveillance Matrix</Text>
+        <View style={styles.titleWrapper}>
+          <Text style={styles.headerTitle}>Perimeter & Station Security</Text>
+          <Text style={styles.headerSubtitle}>Real-time boundary monitoring</Text>
+        </View>
+        <View style={styles.statusPill}>
+          <View style={styles.pulseDot} />
+          <Text style={styles.statusPillText}>Armed</Text>
+        </View>
       </View>
 
       <View style={styles.tilesList}>
@@ -21,12 +28,12 @@ export default function SecurityMatrix({ pirMotion, irObstacle, reedLocked = tru
               <MaterialCommunityIcons 
                 name="motion-sensor" 
                 size={18} 
-                color={pirMotion ? Colors.status.danger : Colors.status.success} 
+                color={pirMotion ? '#ef4444' : '#10b981'} 
               />
             </View>
             <View>
-              <Text style={styles.tileName}>PIR Motion Sensor</Text>
-              <Text style={styles.tileSub}>HC-SR501 • Pin D2</Text>
+              <Text style={styles.tileName}>PIR Motion Detector</Text>
+              <Text style={styles.tileSub}>Infrared Passive Sensing</Text>
             </View>
           </View>
           <View style={[styles.statusBadge, pirMotion ? styles.badgeDanger : styles.badgeNormal]}>
@@ -36,46 +43,46 @@ export default function SecurityMatrix({ pirMotion, irObstacle, reedLocked = tru
           </View>
         </View>
 
-        {/* 2. IR Obstacle Sensor */}
+        {/* 2. Optical Proximity Sensor */}
         <View style={styles.tile}>
           <View style={styles.tileLeft}>
             <View style={[styles.tileIcon, irObstacle ? styles.iconWarning : styles.iconNormal]}>
               <MaterialCommunityIcons 
                 name="radar" 
                 size={18} 
-                color={irObstacle ? Colors.status.warning : Colors.status.success} 
+                color={irObstacle ? '#f59e0b' : '#10b981'} 
               />
             </View>
             <View>
-              <Text style={styles.tileName}>IR Proximity Sensor</Text>
-              <Text style={styles.tileSub}>HW-201 • Pin D2</Text>
+              <Text style={styles.tileName}>Optical Proximity Sensor</Text>
+              <Text style={styles.tileSub}>Infrared Beam Guard</Text>
             </View>
           </View>
           <View style={[styles.statusBadge, irObstacle ? styles.badgeWarning : styles.badgeNormal]}>
             <Text style={[styles.statusText, irObstacle ? styles.textWarning : styles.textNormal]}>
-              {irObstacle ? 'OBSTACLE' : 'Clear'}
+              {irObstacle ? 'PROXIMITY TRIGGER' : 'Clear'}
             </Text>
           </View>
         </View>
 
-        {/* 3. Cabinet Reed Switch */}
+        {/* 3. Station Enclosure Lock */}
         <View style={styles.tile}>
           <View style={styles.tileLeft}>
-            <View style={[styles.tileIcon, !reedLocked ? styles.iconDanger : styles.iconNormal]}>
+            <View style={[styles.tileIcon, reedLocked ? styles.iconNormal : styles.iconDanger]}>
               <MaterialCommunityIcons 
-                name={reedLocked ? "lock" : "lock-open-variant"} 
+                name={reedLocked ? 'lock' : 'lock-open-variant'} 
                 size={18} 
-                color={reedLocked ? Colors.status.success : Colors.status.danger} 
+                color={reedLocked ? '#10b981' : '#ef4444'} 
               />
             </View>
             <View>
-              <Text style={styles.tileName}>Cabinet Enclosure</Text>
-              <Text style={styles.tileSub}>Magnetic Reed Switch</Text>
+              <Text style={styles.tileName}>Station Enclosure Lock</Text>
+              <Text style={styles.tileSub}>Magnetic Contact Guard</Text>
             </View>
           </View>
-          <View style={[styles.statusBadge, !reedLocked ? styles.badgeDanger : styles.badgeNormal]}>
-            <Text style={[styles.statusText, !reedLocked ? styles.textDanger : styles.textNormal]}>
-              {reedLocked ? 'Locked' : 'OPEN'}
+          <View style={[styles.statusBadge, reedLocked ? styles.badgeNormal : styles.badgeDanger]}>
+            <Text style={[styles.statusText, reedLocked ? styles.textNormal : styles.textDanger]}>
+              {reedLocked ? 'SECURED' : 'UNLOCKED'}
             </Text>
           </View>
         </View>
@@ -96,23 +103,49 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 12
+    marginBottom: 14,
+    gap: 10
   },
   headerIcon: {
-    width: 28,
-    height: 28,
+    width: 32,
+    height: 32,
     borderRadius: 8,
     backgroundColor: 'rgba(56, 189, 248, 0.12)',
     alignItems: 'center',
     justifyContent: 'center'
   },
+  titleWrapper: {
+    flex: 1
+  },
   headerTitle: {
-    color: Colors.text.primary,
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5
+    color: '#f8fafc',
+    fontSize: 14,
+    fontWeight: '700'
+  },
+  headerSubtitle: {
+    color: '#94a3b8',
+    fontSize: 10,
+    marginTop: 1
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    gap: 5
+  },
+  pulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10b981'
+  },
+  statusPillText: {
+    color: '#10b981',
+    fontSize: 10,
+    fontWeight: '700'
   },
   tilesList: {
     gap: 8
@@ -121,16 +154,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 10,
+    backgroundColor: '#070b14',
     borderRadius: 12,
-    backgroundColor: Colors.surfaceHighlight,
+    padding: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)'
+    borderColor: 'rgba(255, 255, 255, 0.05)'
   },
   tileLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10
+    gap: 10,
+    flex: 1
   },
   tileIcon: {
     width: 32,
@@ -140,53 +174,53 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   iconNormal: {
-    backgroundColor: Colors.status.successBg
+    backgroundColor: 'rgba(16, 185, 129, 0.12)'
   },
   iconWarning: {
-    backgroundColor: Colors.status.warningBg
+    backgroundColor: 'rgba(245, 158, 11, 0.12)'
   },
   iconDanger: {
-    backgroundColor: Colors.status.dangerBg
+    backgroundColor: 'rgba(239, 68, 68, 0.12)'
   },
   tileName: {
-    color: Colors.text.primary,
+    color: '#f8fafc',
     fontSize: 12,
-    fontWeight: '600'
+    fontWeight: '700'
   },
   tileSub: {
-    color: Colors.text.muted,
-    fontSize: 10,
-    fontFamily: 'monospace'
+    color: '#64748b',
+    fontSize: 9,
+    marginTop: 1
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 10,
+    borderRadius: 12,
     borderWidth: 1
   },
   badgeNormal: {
-    backgroundColor: Colors.status.successBg,
-    borderColor: Colors.status.successBorder
+    backgroundColor: 'rgba(16, 185, 129, 0.12)',
+    borderColor: 'rgba(16, 185, 129, 0.3)'
   },
   badgeWarning: {
-    backgroundColor: Colors.status.warningBg,
-    borderColor: Colors.status.warningBorder
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderColor: 'rgba(245, 158, 11, 0.3)'
   },
   badgeDanger: {
-    backgroundColor: Colors.status.dangerBg,
-    borderColor: Colors.status.dangerBorder
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderColor: 'rgba(239, 68, 68, 0.35)'
   },
   statusText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '700'
   },
   textNormal: {
-    color: Colors.status.success
+    color: '#10b981'
   },
   textWarning: {
-    color: Colors.status.warning
+    color: '#f59e0b'
   },
   textDanger: {
-    color: Colors.status.danger
+    color: '#ef4444'
   }
 });
