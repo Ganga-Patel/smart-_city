@@ -133,7 +133,7 @@ export default function DashboardScreen({
     const maxT = temps.length > 0 ? Math.max(...temps) : currentTemp;
     const avgT = temps.length > 0 ? (temps.reduce((a, b) => a + b, 0) / temps.length) : currentTemp;
 
-    const minH = hums.length > 0 ? Math.min(...hms => hms, ...hums) : currentHum;
+    const minH = hums.length > 0 ? Math.min(...hums) : currentHum;
     const maxH = hums.length > 0 ? Math.max(...hums) : currentHum;
     const avgH = hums.length > 0 ? (hums.reduce((a, b) => a + b, 0) / hums.length) : currentHum;
 
