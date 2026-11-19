@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from '../constants/Colors';
+import { DarkTheme } from '../constants/Colors';
 
-export default function TrafficCard({ traffic }) {
+export default function TrafficCard({ traffic, theme: appTheme = DarkTheme, isDark = true }) {
   const speed = traffic?.currentSpeed ?? 27;
   const freeFlow = traffic?.freeFlowSpeed ?? 54;
   const status = traffic?.status || 'Moderate Flow';
@@ -25,78 +25,108 @@ export default function TrafficCard({ traffic }) {
     return { color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: 'rgba(245, 158, 11, 0.3)' };
   };
 
-  const theme = getStatusTheme();
+  const statusStyle = getStatusTheme();
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container, 
+      { 
+        backgroundColor: appTheme.card, 
+        borderColor: appTheme.cardBorder 
+      }
+    ]}>
       {/* Header */}
       <View style={styles.headerRow}>
-        <View style={styles.headerIcon}>
+        <View style={[
+          styles.headerIcon,
+          {
+            backgroundColor: isDark ? 'rgba(245, 158, 11, 0.15)' : 'rgba(245, 158, 11, 0.1)',
+            borderColor: isDark ? 'rgba(245, 158, 11, 0.25)' : 'rgba(245, 158, 11, 0.25)'
+          }
+        ]}>
           <MaterialCommunityIcons name="car-multiple" size={18} color="#f59e0b" />
         </View>
         <View style={styles.titleWrapper}>
-          <Text style={styles.headerTitle}>Urban Mobility &amp; Live Traffic</Text>
-          <Text style={styles.headerSubtitle}>Mappls Arterial Corridor Tracking</Text>
+          <Text style={[styles.headerTitle, { color: appTheme.text.primary }]}>Urban Mobility & Live Traffic</Text>
+          <Text style={[styles.headerSubtitle, { color: appTheme.text.secondary }]}>Mappls Arterial Corridor Tracking</Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: theme.bg, borderColor: theme.border }]}>
-          <Text style={[styles.statusText, { color: theme.color }]}>{status}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
+          <Text style={[styles.statusText, { color: statusStyle.color }]}>{status}</Text>
         </View>
       </View>
 
       {/* Main Velocity & Delay Highlight */}
       <View style={styles.highlightRow}>
         <View style={styles.speedBlock}>
-          <Text style={styles.metricLabel}>ARTERIAL VELOCITY</Text>
+          <Text style={[styles.metricLabel, { color: appTheme.text.secondary }]}>ARTERIAL VELOCITY</Text>
           <View style={styles.valueRow}>
-            <Text style={styles.speedValue}>{speed}</Text>
-            <Text style={styles.speedUnit}>km/h</Text>
+            <Text style={[styles.speedValue, { color: appTheme.text.primary }]}>{speed}</Text>
+            <Text style={[styles.speedUnit, { color: appTheme.text.secondary }]}>km/h</Text>
           </View>
-          <Text style={styles.freeFlowText}>Base Free-Flow: {freeFlow} km/h</Text>
+          <Text style={[styles.freeFlowText, { color: appTheme.text.muted }]}>Free flow: {freeFlow} km/h</Text>
         </View>
 
         <View style={styles.delayBlock}>
-          <Text style={styles.metricLabel}>CONGESTION INDEX</Text>
-          <View style={styles.valueRow}>
-            <Text style={[styles.speedValue, { color: theme.color }]}>{congestion}%</Text>
+          <View style={[styles.delayPill, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
+            <MaterialCommunityIcons name="timer-sand" size={14} color={statusStyle.color} />
+            <Text style={[styles.delayText, { color: statusStyle.color }]}>
+              +{(delaySec / 60).toFixed(1)} min delay
+            </Text>
           </View>
-          <Text style={styles.delayText}>+{delaySec}s Estimated Delay</Text>
+          <Text style={[styles.confidenceText, { color: appTheme.text.muted }]}>Signal Confidence: {confidence}%</Text>
         </View>
       </View>
 
-      {/* Active Corridors Breakdown */}
-      {corridors.length > 0 && (
-        <View style={styles.corridorsList}>
-          <Text style={styles.corridorsHeader}>Monitored Indian Arterial Corridors:</Text>
-          {corridors.slice(0, 4).map((c, idx) => {
-            const corridorHeavy = (c.congestion ?? 0) >= 50;
-            const corridorSmooth = (c.congestion ?? 0) < 35;
-            const cColor = corridorHeavy ? '#ef4444' : corridorSmooth ? '#10b981' : '#f59e0b';
+      {/* Congestion Gauge Bar */}
+      <View style={styles.barContainer}>
+        <View style={styles.barLabels}>
+          <Text style={[styles.barLabelLeft, { color: appTheme.text.secondary }]}>Congestion Index</Text>
+          <Text style={[styles.barLabelRight, { color: statusStyle.color }]}>{congestion}%</Text>
+        </View>
+        <View style={[styles.trackBar, { backgroundColor: appTheme.trackBg }]}>
+          <View 
+            style={[
+              styles.fillBar, 
+              { 
+                width: `${Math.min(congestion, 100)}%`, 
+                backgroundColor: statusStyle.color 
+              }
+            ]} 
+          />
+        </View>
+      </View>
 
+      {/* Arterial Corridor List */}
+      <Text style={[styles.sectionSubtitle, { color: appTheme.text.secondary }]}>MONITORED ANAND CORRIDORS</Text>
+      <View style={styles.corridorList}>
+        {corridors.length === 0 ? (
+          <View style={[styles.corridorItem, { backgroundColor: appTheme.subtle, borderColor: appTheme.cardBorder }]}>
+            <Text style={[styles.corridorName, { color: appTheme.text.primary }]}>Station Road &bull; Amul Dairy Rd</Text>
+            <Text style={[styles.corridorSpeed, { color: appTheme.brand.sky }]}>28 km/h &bull; Normal</Text>
+          </View>
+        ) : (
+          corridors.map((c, i) => {
+            const isCorridorHeavy = (c.congestion || 0) >= 50;
+            const isCorridorModerate = (c.congestion || 0) >= 35;
+            const cColor = isCorridorHeavy ? '#ef4444' : (isCorridorModerate ? '#f59e0b' : '#10b981');
             return (
-              <View key={idx} style={styles.corridorItem}>
+              <View key={c.id || i} style={[styles.corridorItem, { backgroundColor: appTheme.subtle, borderColor: appTheme.cardBorder }]}>
                 <View style={styles.corridorLeft}>
-                  <MaterialCommunityIcons name="road-variant" size={14} color="#38bdf8" />
-                  <Text style={styles.corridorName} numberOfLines={1}>{c.name}</Text>
+                  <View style={[styles.corridorDot, { backgroundColor: cColor }]} />
+                  <Text style={[styles.corridorName, { color: appTheme.text.primary }]}>{c.name}</Text>
                 </View>
                 <View style={styles.corridorRight}>
-                  <Text style={styles.corridorSpeed}>{c.speed} km/h</Text>
-                  <View style={[styles.corridorBadge, { backgroundColor: `${cColor}18` }]}>
-                    <Text style={[styles.corridorStatus, { color: cColor }]}>{c.status}</Text>
-                  </View>
+                  <Text style={[styles.corridorSpeed, { color: cColor }]}>
+                    {c.speed} km/h
+                  </Text>
+                  <Text style={[styles.corridorDelay, { color: appTheme.text.muted }]}>
+                    +{c.delaySec}s
+                  </Text>
                 </View>
               </View>
             );
-          })}
-        </View>
-      )}
-
-      {/* Footer Info */}
-      <View style={styles.footerRow}>
-        <Text style={styles.footerText}>Flow Engine: Mappls Traffic &bull; Reliability {confidence}%</Text>
-        <View style={styles.liveDotRow}>
-          <View style={styles.pulseDot} />
-          <Text style={styles.liveText}>Active Corridors</Text>
-        </View>
+          })
+        )}
       </View>
     </View>
   );
@@ -104,176 +134,165 @@ export default function TrafficCard({ traffic }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.surface,
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
-    marginTop: 14
+    marginTop: 10
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
-    gap: 10
+    gap: 10,
+    marginBottom: 12
   },
   headerIcon: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    borderWidth: 1
   },
   titleWrapper: {
     flex: 1
   },
   headerTitle: {
-    color: '#f8fafc',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700'
   },
   headerSubtitle: {
-    color: '#94a3b8',
     fontSize: 10,
     marginTop: 1
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1
   },
   statusText: {
     fontSize: 10,
-    fontWeight: '700'
+    fontWeight: '800'
   },
   highlightRow: {
     flexDirection: 'row',
-    backgroundColor: '#070b14',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    marginBottom: 12,
-    gap: 16
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12
   },
   speedBlock: {
     flex: 1
   },
-  delayBlock: {
-    flex: 1
-  },
   metricLabel: {
-    color: '#64748b',
     fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 2
   },
   valueRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 4,
-    marginVertical: 2
+    gap: 4
   },
   speedValue: {
-    color: '#f8fafc',
-    fontSize: 26,
-    fontWeight: '800'
+    fontSize: 34,
+    fontWeight: '800',
+    letterSpacing: -1
   },
   speedUnit: {
-    color: '#64748b',
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600'
   },
   freeFlowText: {
-    color: '#64748b',
-    fontSize: 9
+    fontSize: 10,
+    marginTop: 2
+  },
+  delayBlock: {
+    alignItems: 'flex-end',
+    gap: 4
+  },
+  delayPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    gap: 4
   },
   delayText: {
-    color: '#94a3b8',
-    fontSize: 9,
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  confidenceText: {
+    fontSize: 9
+  },
+  barContainer: {
+    marginBottom: 14
+  },
+  barLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4
+  },
+  barLabelLeft: {
+    fontSize: 10,
     fontWeight: '600'
   },
-  corridorsList: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
-    paddingTop: 10,
-    gap: 6
-  },
-  corridorsHeader: {
-    color: '#94a3b8',
+  barLabelRight: {
     fontSize: 10,
+    fontWeight: '800'
+  },
+  trackBar: {
+    height: 6,
+    borderRadius: 3,
+    overflow: 'hidden'
+  },
+  fillBar: {
+    height: '100%',
+    borderRadius: 3
+  },
+  sectionSubtitle: {
+    fontSize: 9,
     fontWeight: '700',
-    marginBottom: 2
+    letterSpacing: 0.5,
+    marginBottom: 8
+  },
+  corridorList: {
+    gap: 6
   },
   corridorItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#070b14',
     paddingHorizontal: 10,
     paddingVertical: 8,
-    borderRadius: 8
+    borderRadius: 10,
+    borderWidth: 1
   },
   corridorLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     flex: 1
+  },
+  corridorDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3
   },
   corridorName: {
-    color: '#f8fafc',
     fontSize: 11,
-    fontWeight: '600',
-    flex: 1
+    fontWeight: '600'
   },
   corridorRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8
+    alignItems: 'flex-end'
   },
   corridorSpeed: {
-    color: '#cbd5e1',
     fontSize: 11,
-    fontWeight: '700'
+    fontWeight: '800'
   },
-  corridorBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6
-  },
-  corridorStatus: {
-    fontSize: 9,
-    fontWeight: '700'
-  },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.05)',
-    paddingTop: 8,
-    marginTop: 10
-  },
-  footerText: {
-    color: '#64748b',
+  corridorDelay: {
     fontSize: 9
-  },
-  liveDotRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4
-  },
-  pulseDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#10b981'
-  },
-  liveText: {
-    color: '#10b981',
-    fontSize: 9,
-    fontWeight: '700'
   }
 });

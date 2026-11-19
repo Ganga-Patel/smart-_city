@@ -6,13 +6,19 @@ import DashboardScreen from './screens/DashboardScreen';
 import { subscribeToTelemetry } from './services/firebase';
 import { normalizeRawTelemetry } from './services/normalizer';
 import { startUnifiedPolling, fetchUnifiedDashboardData } from './services/api';
+import { DarkTheme, LightTheme } from './constants/Colors';
 
 export default function App() {
-  // Only 2 pages as requested: 'sensor' | 'city' (Default to 'sensor' matching website)
-  const [dashboardMode, setDashboardMode] = useState('sensor');
+  // Only 2 dashboard pages as requested: 'city' | 'sensor'
+  const [dashboardMode, setDashboardMode] = useState('city');
+  // Dark / Light Theme Mode (defaulting to dark matching website theme)
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFahrenheit, setIsFahrenheit] = useState(false);
+
+  // Derive active theme tokens
+  const theme = isDarkMode ? DarkTheme : LightTheme;
 
   // Live Telemetry & History State
   const [telemetry, setTelemetry] = useState(normalizeRawTelemetry(null, 'smartcity'));
@@ -89,8 +95,11 @@ export default function App() {
   const isSensor = dashboardMode === 'sensor';
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+      <StatusBar 
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'} 
+        backgroundColor={theme.headerBg} 
+      />
       
       {/* Top Header Matching Website */}
       <Header 
@@ -100,8 +109,9 @@ export default function App() {
         isFahrenheit={isFahrenheit}
         onToggleUnit={() => setIsFahrenheit(prev => !prev)}
         activeMode={dashboardMode}
-        onToggleMode={() => setDashboardMode(prev => prev === 'sensor' ? 'city' : 'sensor')}
         location={telemetry?.location || 'Anand, Gujarat, India'}
+        theme={theme}
+        isDark={isDarkMode}
       />
 
       {/* Main Screen Content: Dedicated City or Sensor Dashboard */}
@@ -114,44 +124,105 @@ export default function App() {
           isFahrenheit={isFahrenheit}
           onToggleUnit={() => setIsFahrenheit(prev => !prev)}
           activeMode={dashboardMode}
-          onToggleMode={(mode) => setDashboardMode(mode)}
+          theme={theme}
+          isDark={isDarkMode}
         />
       </View>
 
-      {/* Clean 2-Page Bottom Navigation Bar (ONLY City Dashboard & Sensor Dashboard) */}
-      <View style={styles.tabBar}>
+      {/* ========================================================================= */}
+      {/* FOOTER BAR: DASHBOARD SWITCHER (CITY / SENSORS) + DARK / LIGHT THEME TOGGLE */}
+      {/* ========================================================================= */}
+      <View style={[
+        styles.tabBar, 
+        { 
+          backgroundColor: theme.footerBg, 
+          borderTopColor: theme.footerBorder 
+        }
+      ]}>
         {/* Page 1: City Dashboard */}
         <TouchableOpacity 
-          style={[styles.tabItem, !isSensor && styles.tabItemActive]} 
+          style={[
+            styles.tabItem, 
+            !isSensor 
+              ? {
+                  backgroundColor: isDarkMode ? 'rgba(14, 165, 233, 0.15)' : 'rgba(14, 165, 233, 0.12)',
+                  borderColor: theme.brand.sky
+                }
+              : {
+                  backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.5)' : '#f1f5f9',
+                  borderColor: theme.surfaceBorder
+                }
+          ]} 
           onPress={() => setDashboardMode('city')}
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons 
             name={!isSensor ? "city-variant" : "city-variant-outline"} 
-            size={22} 
-            color={!isSensor ? "#38bdf8" : "#64748b"} 
+            size={20} 
+            color={!isSensor ? theme.brand.sky : theme.text.muted} 
           />
-          <Text style={[styles.tabLabel, !isSensor && styles.tabLabelActive]}>
-            City Dashboard
+          <Text style={[
+            styles.tabLabel, 
+            { color: !isSensor ? theme.brand.sky : theme.text.muted },
+            !isSensor && styles.tabLabelActive
+          ]}>
+            City
           </Text>
-          {!isSensor && <View style={styles.activeBar} />}
+          {!isSensor && <View style={[styles.activeBar, { backgroundColor: theme.brand.sky }]} />}
         </TouchableOpacity>
 
         {/* Page 2: Sensor Dashboard */}
         <TouchableOpacity 
-          style={[styles.tabItem, isSensor && styles.tabItemActive]} 
+          style={[
+            styles.tabItem, 
+            isSensor 
+              ? {
+                  backgroundColor: isDarkMode ? 'rgba(14, 165, 233, 0.15)' : 'rgba(14, 165, 233, 0.12)',
+                  borderColor: theme.brand.sky
+                }
+              : {
+                  backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.5)' : '#f1f5f9',
+                  borderColor: theme.surfaceBorder
+                }
+          ]} 
           onPress={() => setDashboardMode('sensor')}
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons 
             name={isSensor ? "cpu-64-bit" : "cpu-64-bit"} 
-            size={22} 
-            color={isSensor ? "#38bdf8" : "#64748b"} 
+            size={20} 
+            color={isSensor ? theme.brand.sky : theme.text.muted} 
           />
-          <Text style={[styles.tabLabel, isSensor && styles.tabLabelActive]}>
-            Sensor Dashboard
+          <Text style={[
+            styles.tabLabel, 
+            { color: isSensor ? theme.brand.sky : theme.text.muted },
+            isSensor && styles.tabLabelActive
+          ]}>
+            Sensors
           </Text>
-          {isSensor && <View style={styles.activeBar} />}
+          {isSensor && <View style={[styles.activeBar, { backgroundColor: theme.brand.sky }]} />}
+        </TouchableOpacity>
+
+        {/* Dark / Light Theme Toggle Option */}
+        <TouchableOpacity 
+          style={[
+            styles.themeToggleBtn,
+            {
+              backgroundColor: isDarkMode ? 'rgba(30, 41, 59, 0.6)' : '#f1f5f9',
+              borderColor: theme.surfaceBorder
+            }
+          ]}
+          onPress={() => setIsDarkMode(prev => !prev)}
+          activeOpacity={0.7}
+        >
+          <MaterialCommunityIcons 
+            name={isDarkMode ? "weather-sunny" : "weather-night"} 
+            size={18} 
+            color={isDarkMode ? "#f59e0b" : "#6366f1"} 
+          />
+          <Text style={[styles.themeToggleText, { color: theme.text.secondary }]}>
+            {isDarkMode ? 'Light' : 'Dark'}
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -160,46 +231,36 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#030712'
+    flex: 1
   },
   screenContainer: {
     flex: 1
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#0f172a',
+    alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(51, 65, 85, 0.7)',
     paddingVertical: 10,
     paddingBottom: 14,
-    paddingHorizontal: 16,
-    gap: 12
+    paddingHorizontal: 12,
+    gap: 8
   },
   tabItem: {
-    flex: 1,
+    flex: 1.3,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 10,
     borderRadius: 12,
-    backgroundColor: 'rgba(30, 41, 59, 0.5)',
     borderWidth: 1,
-    borderColor: 'rgba(51, 65, 85, 0.4)',
-    gap: 8,
+    gap: 6,
     position: 'relative'
   },
-  tabItemActive: {
-    backgroundColor: 'rgba(14, 165, 233, 0.15)',
-    borderColor: 'rgba(56, 189, 248, 0.5)'
-  },
   tabLabel: {
-    color: '#94a3b8',
     fontSize: 12,
     fontWeight: '600'
   },
   tabLabelActive: {
-    color: '#38bdf8',
     fontWeight: '800'
   },
   activeBar: {
@@ -207,7 +268,21 @@ const styles = StyleSheet.create({
     bottom: 2,
     width: 24,
     height: 3,
-    borderRadius: 1.5,
-    backgroundColor: '#38bdf8'
+    borderRadius: 1.5
+  },
+  themeToggleBtn: {
+    flex: 0.9,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 5
+  },
+  themeToggleText: {
+    fontSize: 12,
+    fontWeight: '700',
+    fontFamily: 'monospace'
   }
 });

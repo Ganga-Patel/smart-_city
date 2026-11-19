@@ -1,9 +1,9 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from '../constants/Colors';
+import { DarkTheme } from '../constants/Colors';
 
-export default function AirQualityCard({ airQuality }) {
+export default function AirQualityCard({ airQuality, theme: appTheme = DarkTheme, isDark = true }) {
   const aqi = airQuality?.aqi ?? 81;
   const status = airQuality?.status || 'Moderate';
   const pm25 = airQuality?.pm25 ?? 33.8;
@@ -47,85 +47,127 @@ export default function AirQualityCard({ airQuality }) {
     };
   };
 
-  const theme = getAqiTheme(aqi);
+  const aqiLevel = getAqiTheme(aqi);
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container, 
+      { 
+        backgroundColor: appTheme.card, 
+        borderColor: appTheme.cardBorder 
+      }
+    ]}>
       {/* Header */}
       <View style={styles.headerRow}>
-        <View style={[styles.headerIcon, { backgroundColor: theme.bg }]}>
-          <MaterialCommunityIcons name="air-filter" size={18} color={theme.color} />
+        <View style={[
+          styles.headerIcon,
+          {
+            backgroundColor: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
+            borderColor: isDark ? 'rgba(16, 185, 129, 0.25)' : 'rgba(16, 185, 129, 0.25)'
+          }
+        ]}>
+          <MaterialCommunityIcons name="molecule" size={18} color="#10b981" />
         </View>
         <View style={styles.titleWrapper}>
-          <Text style={styles.headerTitle}>Urban Air Quality Index</Text>
-          <Text style={styles.headerSubtitle}>EPA / NAAQS Comprehensive Scale</Text>
+          <Text style={[styles.headerTitle, { color: appTheme.text.primary }]}>Urban Air Quality Index</Text>
+          <Text style={[styles.headerSubtitle, { color: appTheme.text.secondary }]}>Atmospheric Pollutant Telemetry</Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: theme.bg, borderColor: theme.border }]}>
-          <Text style={[styles.statusBadgeText, { color: theme.color }]}>{status}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: aqiLevel.bg, borderColor: aqiLevel.border }]}>
+          <Text style={[styles.statusText, { color: aqiLevel.color }]}>{status}</Text>
         </View>
       </View>
 
-      {/* Main AQI Score Highlight */}
-      <View style={styles.scoreRow}>
-        <View>
-          <Text style={styles.aqiLabel}>US AQI SCORE</Text>
-          <View style={styles.scoreValueRow}>
-            <Text style={[styles.scoreValue, { color: theme.color }]}>{aqi}</Text>
-            <Text style={styles.scoreScale}>/ 500 US AQI</Text>
+      {/* Main AQI Meter Display */}
+      <View style={styles.highlightRow}>
+        <View style={styles.aqiBlock}>
+          <Text style={[styles.metricLabel, { color: appTheme.text.secondary }]}>COMPOSITE AQI SCORE</Text>
+          <View style={styles.valueRow}>
+            <Text style={[styles.aqiValue, { color: aqiLevel.color }]}>{aqi}</Text>
+            <Text style={[styles.aqiMax, { color: appTheme.text.muted }]}>/ 500</Text>
           </View>
         </View>
+
         <View style={styles.advisoryBlock}>
-          <Text style={styles.advisoryText}>{theme.advisory}</Text>
+          <View style={[styles.advisoryPill, { backgroundColor: aqiLevel.bg, borderColor: aqiLevel.border }]}>
+            <MaterialCommunityIcons name="shield-alert-outline" size={13} color={aqiLevel.color} />
+            <Text style={[styles.advisoryText, { color: aqiLevel.color }]} numberOfLines={2}>
+              {aqiLevel.advisory}
+            </Text>
+          </View>
         </View>
       </View>
 
-      {/* Pollutant Breakdown Grid */}
+      {/* Pollutant Matrix */}
       <View style={styles.grid}>
-        <View style={styles.gridItem}>
-          <Text style={styles.itemLabel}>PM 2.5</Text>
-          <View style={styles.valueRow}>
-            <Text style={styles.itemValue}>{pm25}</Text>
-            <Text style={styles.itemUnit}>µg/m³</Text>
+        {/* PM2.5 */}
+        <View style={[styles.gridItem, { backgroundColor: appTheme.subtle, borderColor: appTheme.cardBorder }]}>
+          <View style={styles.itemHeader}>
+            <Text style={[styles.pollutantName, { color: appTheme.text.primary }]}>PM2.5</Text>
+            <Text style={[styles.pollutantType, { color: appTheme.text.muted }]}>Fine Particles</Text>
+          </View>
+          <View style={styles.itemValueRow}>
+            <Text style={[styles.itemValue, { color: pm25 > 35 ? '#ef4444' : '#10b981' }]}>{pm25}</Text>
+            <Text style={[styles.itemUnit, { color: appTheme.text.muted }]}>µg/m³</Text>
           </View>
         </View>
 
-        <View style={styles.gridItem}>
-          <Text style={styles.itemLabel}>PM 10</Text>
-          <View style={styles.valueRow}>
-            <Text style={styles.itemValue}>{pm10}</Text>
-            <Text style={styles.itemUnit}>µg/m³</Text>
+        {/* PM10 */}
+        <View style={[styles.gridItem, { backgroundColor: appTheme.subtle, borderColor: appTheme.cardBorder }]}>
+          <View style={styles.itemHeader}>
+            <Text style={[styles.pollutantName, { color: appTheme.text.primary }]}>PM10</Text>
+            <Text style={[styles.pollutantType, { color: appTheme.text.muted }]}>Coarse Dust</Text>
+          </View>
+          <View style={styles.itemValueRow}>
+            <Text style={[styles.itemValue, { color: pm10 > 50 ? '#f59e0b' : '#10b981' }]}>{pm10}</Text>
+            <Text style={[styles.itemUnit, { color: appTheme.text.muted }]}>µg/m³</Text>
           </View>
         </View>
 
-        <View style={styles.gridItem}>
-          <Text style={styles.itemLabel}>Nitrogen (NO₂)</Text>
-          <View style={styles.valueRow}>
-            <Text style={styles.itemValue}>{no2}</Text>
-            <Text style={styles.itemUnit}>ppb</Text>
+        {/* Ozone (O3) */}
+        <View style={[styles.gridItem, { backgroundColor: appTheme.subtle, borderColor: appTheme.cardBorder }]}>
+          <View style={styles.itemHeader}>
+            <Text style={[styles.pollutantName, { color: appTheme.text.primary }]}>Ozone (O₃)</Text>
+            <Text style={[styles.pollutantType, { color: appTheme.text.muted }]}>Surface Gas</Text>
+          </View>
+          <View style={styles.itemValueRow}>
+            <Text style={[styles.itemValue, { color: appTheme.text.primary }]}>{o3}</Text>
+            <Text style={[styles.itemUnit, { color: appTheme.text.muted }]}>µg/m³</Text>
           </View>
         </View>
 
-        <View style={styles.gridItem}>
-          <Text style={styles.itemLabel}>Ozone (O₃)</Text>
-          <View style={styles.valueRow}>
-            <Text style={styles.itemValue}>{o3}</Text>
-            <Text style={styles.itemUnit}>µg/m³</Text>
+        {/* Nitrogen Dioxide (NO2) */}
+        <View style={[styles.gridItem, { backgroundColor: appTheme.subtle, borderColor: appTheme.cardBorder }]}>
+          <View style={styles.itemHeader}>
+            <Text style={[styles.pollutantName, { color: appTheme.text.primary }]}>NO₂</Text>
+            <Text style={[styles.pollutantType, { color: appTheme.text.muted }]}>Auto Emissions</Text>
+          </View>
+          <View style={styles.itemValueRow}>
+            <Text style={[styles.itemValue, { color: appTheme.text.primary }]}>{no2}</Text>
+            <Text style={[styles.itemUnit, { color: appTheme.text.muted }]}>µg/m³</Text>
           </View>
         </View>
 
-        <View style={styles.gridItem}>
-          <Text style={styles.itemLabel}>Carbon (CO)</Text>
-          <View style={styles.valueRow}>
-            <Text style={styles.itemValue}>{co}</Text>
-            <Text style={styles.itemUnit}>µg/m³</Text>
+        {/* Carbon Monoxide (CO) */}
+        <View style={[styles.gridItem, { backgroundColor: appTheme.subtle, borderColor: appTheme.cardBorder }]}>
+          <View style={styles.itemHeader}>
+            <Text style={[styles.pollutantName, { color: appTheme.text.primary }]}>CO</Text>
+            <Text style={[styles.pollutantType, { color: appTheme.text.muted }]}>Combustion</Text>
+          </View>
+          <View style={styles.itemValueRow}>
+            <Text style={[styles.itemValue, { color: appTheme.text.primary }]}>{co}</Text>
+            <Text style={[styles.itemUnit, { color: appTheme.text.muted }]}>µg/m³</Text>
           </View>
         </View>
 
-        <View style={styles.gridItem}>
-          <Text style={styles.itemLabel}>Sulfur (SO₂)</Text>
-          <View style={styles.valueRow}>
-            <Text style={styles.itemValue}>{so2}</Text>
-            <Text style={styles.itemUnit}>ppb</Text>
+        {/* Sulfur Dioxide (SO2) */}
+        <View style={[styles.gridItem, { backgroundColor: appTheme.subtle, borderColor: appTheme.cardBorder }]}>
+          <View style={styles.itemHeader}>
+            <Text style={[styles.pollutantName, { color: appTheme.text.primary }]}>SO₂</Text>
+            <Text style={[styles.pollutantType, { color: appTheme.text.muted }]}>Industrial Gas</Text>
+          </View>
+          <View style={styles.itemValueRow}>
+            <Text style={[styles.itemValue, { color: appTheme.text.primary }]}>{so2}</Text>
+            <Text style={[styles.itemUnit, { color: appTheme.text.muted }]}>µg/m³</Text>
           </View>
         </View>
       </View>
@@ -135,88 +177,92 @@ export default function AirQualityCard({ airQuality }) {
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.surface,
     borderRadius: 16,
-    padding: 16,
+    padding: 14,
     borderWidth: 1,
-    borderColor: Colors.surfaceBorder,
-    marginTop: 14
+    marginTop: 10
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 14,
-    gap: 10
+    gap: 10,
+    marginBottom: 12
   },
   headerIcon: {
     width: 32,
     height: 32,
     borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    borderWidth: 1
   },
   titleWrapper: {
     flex: 1
   },
   headerTitle: {
-    color: '#f8fafc',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700'
   },
   headerSubtitle: {
-    color: '#94a3b8',
     fontSize: 10,
     marginTop: 1
   },
   statusBadge: {
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1
   },
-  statusBadgeText: {
+  statusText: {
     fontSize: 10,
-    fontWeight: '700'
+    fontWeight: '800'
   },
-  scoreRow: {
+  highlightRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#070b14',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    marginBottom: 12,
-    gap: 12
+    marginBottom: 14,
+    gap: 10
   },
-  aqiLabel: {
-    color: '#64748b',
-    fontSize: 9,
-    fontWeight: '800',
-    letterSpacing: 0.5
-  },
-  scoreValueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-    marginTop: 2
-  },
-  scoreValue: {
-    fontSize: 32,
-    fontWeight: '800'
-  },
-  scoreScale: {
-    color: '#64748b',
-    fontSize: 11
-  },
-  advisoryBlock: {
+  aqiBlock: {
     flex: 1
   },
+  metricLabel: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 2
+  },
+  valueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4
+  },
+  aqiValue: {
+    fontSize: 36,
+    fontWeight: '800',
+    letterSpacing: -1
+  },
+  aqiMax: {
+    fontSize: 12,
+    fontWeight: '600'
+  },
+  advisoryBlock: {
+    flex: 1.2
+  },
+  advisoryPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    padding: 8,
+    borderRadius: 10,
+    borderWidth: 1
+  },
   advisoryText: {
-    color: '#94a3b8',
-    fontSize: 10,
-    lineHeight: 14
+    fontSize: 9,
+    fontWeight: '600',
+    flex: 1,
+    lineHeight: 12
   },
   grid: {
     flexDirection: 'row',
@@ -225,31 +271,34 @@ const styles = StyleSheet.create({
   },
   gridItem: {
     flex: 1,
-    minWidth: '30%',
-    backgroundColor: '#070b14',
-    borderRadius: 10,
-    padding: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)'
+    minWidth: '47%',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1
   },
-  itemLabel: {
-    color: '#64748b',
-    fontSize: 9,
+  itemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginBottom: 4
+  },
+  pollutantName: {
+    fontSize: 11,
     fontWeight: '700'
   },
-  valueRow: {
+  pollutantType: {
+    fontSize: 9
+  },
+  itemValueRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 3,
-    marginTop: 3
+    gap: 4
   },
   itemValue: {
-    color: '#f8fafc',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800'
   },
   itemUnit: {
-    color: '#64748b',
     fontSize: 9
   }
 });

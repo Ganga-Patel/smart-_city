@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { ScrollView, View, Text, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import WeatherCard from '../components/WeatherCard';
@@ -6,6 +6,7 @@ import AirQualityCard from '../components/AirQualityCard';
 import TrafficCard from '../components/TrafficCard';
 import UrbanLiveMap from '../components/UrbanLiveMap';
 import TwelveHourAnalysisGraph from '../components/TwelveHourAnalysisGraph';
+import { DarkTheme } from '../constants/Colors';
 
 export default function DashboardScreen({
   telemetry,
@@ -15,38 +16,9 @@ export default function DashboardScreen({
   isFahrenheit = false,
   onToggleUnit,
   activeMode = 'sensor',
-  onToggleMode
+  theme = DarkTheme,
+  isDark = true
 }) {
-  const [internalMode, setInternalMode] = useState(activeMode);
-  const [internalFahrenheit, setInternalFahrenheit] = useState(isFahrenheit);
-
-  useEffect(() => {
-    if (activeMode) {
-      setInternalMode(activeMode);
-    }
-  }, [activeMode]);
-
-  useEffect(() => {
-    setInternalFahrenheit(isFahrenheit);
-  }, [isFahrenheit]);
-
-  const setMode = (mode) => {
-    setInternalMode(mode);
-    if (onToggleMode) {
-      onToggleMode(mode);
-    }
-  };
-
-  const toggleUnit = () => {
-    if (onToggleUnit) {
-      onToggleUnit();
-    } else {
-      setInternalFahrenheit(prev => !prev);
-    }
-  };
-
-  const useFahrenheit = onToggleUnit ? isFahrenheit : internalFahrenheit;
-
   const safeFormatTime = (ts) => {
     try {
       if (!ts) return new Date().toLocaleTimeString('en-GB');
@@ -71,8 +43,8 @@ export default function DashboardScreen({
   const isRaining = Boolean(telemetry?.rainDetected);
   const isGasAlert = Boolean(telemetry?.gasAlert);
 
-  const displayTemp = useFahrenheit ? (currentTemp * 1.8 + 32) : currentTemp;
-  const tempUnit = useFahrenheit ? '°F' : '°C';
+  const displayTemp = isFahrenheit ? (currentTemp * 1.8 + 32) : currentTemp;
+  const tempUnit = isFahrenheit ? '°F' : '°C';
 
   // Status determinations matching webapp
   const getTempStatus = (temp) => {
@@ -114,7 +86,7 @@ export default function DashboardScreen({
       badgeColor = '#f59e0b';
     }
 
-    const dispHI = useFahrenheit ? (HIC * 1.8 + 32) : HIC;
+    const dispHI = isFahrenheit ? (HIC * 1.8 + 32) : HIC;
 
     return {
       value: dispHI.toFixed(1),
@@ -122,7 +94,7 @@ export default function DashboardScreen({
       badgeText,
       badgeColor
     };
-  }, [currentTemp, currentHum, useFahrenheit]);
+  }, [currentTemp, currentHum, isFahrenheit]);
 
   // 12-Hour Statistical Aggregations (Min, Max, Average)
   const stats12h = useMemo(() => {
@@ -140,9 +112,9 @@ export default function DashboardScreen({
     const gasAlertCount = twelveHourHistory.filter(h => h.isGasAlert).length;
     const rainCount = twelveHourHistory.filter(h => h.isRaining).length;
 
-    const dispMinT = useFahrenheit ? (minT * 1.8 + 32) : minT;
-    const dispMaxT = useFahrenheit ? (maxT * 1.8 + 32) : maxT;
-    const dispAvgT = useFahrenheit ? (avgT * 1.8 + 32) : avgT;
+    const dispMinT = isFahrenheit ? (minT * 1.8 + 32) : minT;
+    const dispMaxT = isFahrenheit ? (maxT * 1.8 + 32) : maxT;
+    const dispAvgT = isFahrenheit ? (avgT * 1.8 + 32) : avgT;
 
     return {
       temp: {
@@ -164,80 +136,55 @@ export default function DashboardScreen({
         status: rainCount > 0 ? 'Rain Observed' : 'Dry Period'
       }
     };
-  }, [twelveHourHistory, currentTemp, currentHum, useFahrenheit]);
+  }, [twelveHourHistory, currentTemp, currentHum, isFahrenheit]);
 
   const lastUpdatedTime = safeFormatTime(telemetry?.timestamp);
 
   return (
     <ScrollView 
-      style={styles.container} 
+      style={[styles.container, { backgroundColor: theme.background }]} 
       contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#38bdf8" />}
+      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.brand.sky} />}
       showsVerticalScrollIndicator={false}
     >
-      {/* ================= TOP SEGMENTED SWITCHER (CITY VS SENSORS) ================= */}
-      <View style={styles.segmentContainer}>
-        <TouchableOpacity 
-          style={[styles.segmentBtn, internalMode === 'city' && styles.segmentBtnActive]}
-          onPress={() => setMode('city')}
-          activeOpacity={0.8}
-        >
-          <MaterialCommunityIcons 
-            name="city-variant" 
-            size={16} 
-            color={internalMode === 'city' ? '#38bdf8' : '#94a3b8'} 
-          />
-          <Text style={[styles.segmentText, internalMode === 'city' && styles.segmentTextActive]}>
-            City Dashboard
-          </Text>
-          {internalMode === 'city' && <View style={styles.activeDot} />}
-        </TouchableOpacity>
-
-        <TouchableOpacity 
-          style={[styles.segmentBtn, internalMode === 'sensor' && styles.segmentBtnActive]}
-          onPress={() => setMode('sensor')}
-          activeOpacity={0.8}
-        >
-          <MaterialCommunityIcons 
-            name="cpu-64-bit" 
-            size={16} 
-            color={internalMode === 'sensor' ? '#38bdf8' : '#94a3b8'} 
-          />
-          <Text style={[styles.segmentText, internalMode === 'sensor' && styles.segmentTextActive]}>
-            Sensor Dashboard
-          </Text>
-          {internalMode === 'sensor' && <View style={styles.activeDot} />}
-        </TouchableOpacity>
-      </View>
-
       {/* ========================================================================= */}
-      {/* MODE 1: CITY DASHBOARD (WEATHER, AIR QUALITY, TRAFFIC)                    */}
+      {/* PAGE 1: CITY DASHBOARD (WEATHER, AIR QUALITY, TRAFFIC, URBAN MAP)         */}
       {/* ========================================================================= */}
-      {internalMode === 'city' && (
+      {activeMode === 'city' && (
         <View style={styles.citySection}>
           {/* Status Subtitle Bar */}
           <View style={styles.statusBar}>
             <View style={styles.statusLeft}>
-              <View style={styles.livePulseDot} />
-              <Text style={styles.statusSubtitle}>Real-Time City Weather & Mobility</Text>
+              <View style={[styles.livePulseDot, { backgroundColor: theme.status.success }]} />
+              <Text style={[styles.statusSubtitle, { color: theme.text.primary }]}>
+                Real-Time City Weather & Mobility
+              </Text>
             </View>
-            <Text style={styles.syncClock}>Updated: {lastUpdatedTime}</Text>
+            <Text style={[styles.syncClock, { color: theme.text.muted }]}>
+              Updated: {lastUpdatedTime}
+            </Text>
           </View>
 
           {/* BOX 1: REAL-TIME WEATHER INTELLIGENCE */}
           <WeatherCard 
             cityWeather={telemetry?.cityWeather} 
             weather={telemetry?.weather} 
+            theme={theme}
+            isDark={isDark}
           />
 
           {/* BOX 2: URBAN AIR QUALITY & ATMOSPHERIC INDEX */}
           <AirQualityCard 
             airQuality={telemetry?.airQuality} 
+            theme={theme}
+            isDark={isDark}
           />
 
           {/* BOX 3: URBAN MOBILITY & LIVE TRAFFIC */}
           <TrafficCard 
             traffic={telemetry?.traffic} 
+            theme={theme}
+            isDark={isDark}
           />
 
           {/* BOX 4: URBAN LIVE MAP (SPATIAL VECTOR & TRAFFIC CORRIDORS CANVAS) */}
@@ -245,48 +192,40 @@ export default function DashboardScreen({
             location={telemetry?.location || 'Anand, Gujarat, India'}
             traffic={telemetry?.traffic}
             telemetry={telemetry}
+            theme={theme}
+            isDark={isDark}
           />
-
-          {/* Quick Switch Banner to Sensor Dashboard */}
-          <TouchableOpacity 
-            style={styles.switchBanner} 
-            onPress={() => setMode('sensor')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.switchBannerLeft}>
-              <View style={styles.switchBannerIcon}>
-                <MaterialCommunityIcons name="chip" size={18} color="#38bdf8" />
-              </View>
-              <View>
-                <Text style={styles.switchBannerTitle}>Open Sensor Monitoring Dashboard</Text>
-                <Text style={styles.switchBannerDesc}>View DHT22, MQ2, Rain & 12-Hour Telemetry Graph</Text>
-              </View>
-            </View>
-            <MaterialCommunityIcons name="arrow-right-circle" size={20} color="#38bdf8" />
-          </TouchableOpacity>
         </View>
       )}
 
       {/* ========================================================================= */}
-      {/* MODE 2: SENSOR DASHBOARD (DHT22, MQ2, RAIN, HEAT INDEX, 12H GRAPH)        */}
+      {/* PAGE 2: SENSOR DASHBOARD (4 PROBES, HEAT INDEX, 12H GRAPH)                */}
       {/* ========================================================================= */}
-      {internalMode === 'sensor' && (
+      {activeMode === 'sensor' && (
         <View style={styles.sensorSection}>
           {/* Section 1 Header */}
           <View style={styles.sectionHeaderRow}>
             <View style={styles.sectionTitleGroup}>
-              <MaterialCommunityIcons name="pulse" size={16} color="#38bdf8" />
-              <Text style={styles.sectionTitle}>Live Environmental Sensors</Text>
+              <MaterialCommunityIcons name="pulse" size={16} color={theme.brand.sky} />
+              <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
+                Live Environmental Sensors
+              </Text>
             </View>
             <View style={styles.sectionControlsGroup}>
-              <Text style={styles.probesBadge}>Active Probes: 4</Text>
-              <TouchableOpacity 
-                style={styles.unitBtn} 
-                onPress={toggleUnit}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.unitBtnText}>{tempUnit}</Text>
-              </TouchableOpacity>
+              <View style={[styles.probesBadge, { backgroundColor: theme.cardSubtle, borderColor: theme.surfaceBorder }]}>
+                <Text style={[styles.probesBadgeText, { color: theme.text.secondary }]}>
+                  Active Probes: 4
+                </Text>
+              </View>
+              {onToggleUnit && (
+                <TouchableOpacity 
+                  style={[styles.unitBtn, { backgroundColor: isDark ? 'rgba(14, 165, 233, 0.15)' : 'rgba(14, 165, 233, 0.1)', borderColor: theme.surfaceBorder }]} 
+                  onPress={onToggleUnit}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.unitBtnText, { color: theme.brand.sky }]}>{tempUnit}</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
@@ -294,15 +233,15 @@ export default function DashboardScreen({
           <View style={styles.cardsGrid}>
             
             {/* CARD 1: TEMPERATURE */}
-            <View style={styles.sensorCard}>
+            <View style={[styles.sensorCard, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardHeaderLeft}>
                   <View style={[styles.iconBox, { backgroundColor: 'rgba(244, 63, 94, 0.15)' }]}>
                     <MaterialCommunityIcons name="thermometer" size={18} color="#f43f5e" />
                   </View>
                   <View>
-                    <Text style={styles.cardTitle}>Temperature</Text>
-                    <Text style={styles.cardSub}>Ambient Thermal Sensor</Text>
+                    <Text style={[styles.cardTitle, { color: theme.text.primary }]}>Temperature</Text>
+                    <Text style={[styles.cardSub, { color: theme.text.muted }]}>Ambient Thermal Sensor</Text>
                   </View>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: tempStatus.bg, borderColor: tempStatus.border }]}>
@@ -311,17 +250,17 @@ export default function DashboardScreen({
               </View>
 
               <View style={styles.valueRow}>
-                <Text style={styles.bigValue}>{displayTemp.toFixed(1)}</Text>
-                <Text style={styles.bigUnit}>{tempUnit}</Text>
+                <Text style={[styles.bigValue, { color: theme.text.primary }]}>{displayTemp.toFixed(1)}</Text>
+                <Text style={[styles.bigUnit, { color: theme.text.secondary }]}>{tempUnit}</Text>
               </View>
 
               <View style={styles.scaleContainer}>
                 <View style={styles.scaleLabels}>
-                  <Text style={styles.scaleLabelText}>{useFahrenheit ? '32°F' : '0°C'}</Text>
-                  <Text style={styles.scaleLabelMid}>Comfort: {useFahrenheit ? '68–86°F' : '20–30°C'}</Text>
-                  <Text style={styles.scaleLabelText}>{useFahrenheit ? '122°F' : '50°C'}</Text>
+                  <Text style={[styles.scaleLabelText, { color: theme.text.muted }]}>{isFahrenheit ? '32°F' : '0°C'}</Text>
+                  <Text style={[styles.scaleLabelMid, { color: theme.text.secondary }]}>Comfort: {isFahrenheit ? '68–86°F' : '20–30°C'}</Text>
+                  <Text style={[styles.scaleLabelText, { color: theme.text.muted }]}>{isFahrenheit ? '122°F' : '50°C'}</Text>
                 </View>
-                <View style={styles.scaleBarTrack}>
+                <View style={[styles.scaleBarTrack, { backgroundColor: theme.trackBg }]}>
                   <View 
                     style={[
                       styles.scaleBarFill, 
@@ -334,22 +273,24 @@ export default function DashboardScreen({
                 </View>
               </View>
 
-              <View style={styles.cardFooter}>
-                <Text style={styles.cardFooterStatus}>Status: <Text style={styles.cardFooterGreen}>Operational</Text></Text>
-                <Text style={styles.cardFooterSub}>Live Sync</Text>
+              <View style={[styles.cardFooter, { borderTopColor: theme.surfaceBorder }]}>
+                <Text style={[styles.cardFooterStatus, { color: theme.text.secondary }]}>
+                  Status: <Text style={styles.cardFooterGreen}>Operational</Text>
+                </Text>
+                <Text style={[styles.cardFooterSub, { color: theme.text.muted }]}>Live Sync</Text>
               </View>
             </View>
 
             {/* CARD 2: HUMIDITY */}
-            <View style={styles.sensorCard}>
+            <View style={[styles.sensorCard, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardHeaderLeft}>
                   <View style={[styles.iconBox, { backgroundColor: 'rgba(56, 189, 248, 0.15)' }]}>
                     <MaterialCommunityIcons name="water-percent" size={18} color="#38bdf8" />
                   </View>
                   <View>
-                    <Text style={styles.cardTitle}>Humidity</Text>
-                    <Text style={styles.cardSub}>Relative Moisture</Text>
+                    <Text style={[styles.cardTitle, { color: theme.text.primary }]}>Humidity</Text>
+                    <Text style={[styles.cardSub, { color: theme.text.muted }]}>Relative Moisture</Text>
                   </View>
                 </View>
                 <View style={[styles.statusBadge, { backgroundColor: humStatus.bg, borderColor: humStatus.border }]}>
@@ -358,17 +299,17 @@ export default function DashboardScreen({
               </View>
 
               <View style={styles.valueRow}>
-                <Text style={styles.bigValue}>{currentHum.toFixed(1)}</Text>
-                <Text style={styles.bigUnit}>% RH</Text>
+                <Text style={[styles.bigValue, { color: theme.text.primary }]}>{currentHum.toFixed(1)}</Text>
+                <Text style={[styles.bigUnit, { color: theme.text.secondary }]}>% RH</Text>
               </View>
 
               <View style={styles.scaleContainer}>
                 <View style={styles.scaleLabels}>
-                  <Text style={styles.scaleLabelText}>0%</Text>
-                  <Text style={styles.scaleLabelMid}>Ideal: 35–65%</Text>
-                  <Text style={styles.scaleLabelText}>100%</Text>
+                  <Text style={[styles.scaleLabelText, { color: theme.text.muted }]}>0%</Text>
+                  <Text style={[styles.scaleLabelMid, { color: theme.text.secondary }]}>Ideal: 35–65%</Text>
+                  <Text style={[styles.scaleLabelText, { color: theme.text.muted }]}>100%</Text>
                 </View>
-                <View style={styles.scaleBarTrack}>
+                <View style={[styles.scaleBarTrack, { backgroundColor: theme.trackBg }]}>
                   <View 
                     style={[
                       styles.scaleBarFill, 
@@ -381,22 +322,24 @@ export default function DashboardScreen({
                 </View>
               </View>
 
-              <View style={styles.cardFooter}>
-                <Text style={styles.cardFooterStatus}>Status: <Text style={styles.cardFooterGreen}>Operational</Text></Text>
-                <Text style={styles.cardFooterSub}>Live Sync</Text>
+              <View style={[styles.cardFooter, { borderTopColor: theme.surfaceBorder }]}>
+                <Text style={[styles.cardFooterStatus, { color: theme.text.secondary }]}>
+                  Status: <Text style={styles.cardFooterGreen}>Operational</Text>
+                </Text>
+                <Text style={[styles.cardFooterSub, { color: theme.text.muted }]}>Live Sync</Text>
               </View>
             </View>
 
             {/* CARD 3: GAS SENSOR */}
-            <View style={styles.sensorCard}>
+            <View style={[styles.sensorCard, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardHeaderLeft}>
                   <View style={[styles.iconBox, { backgroundColor: isGasAlert ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)' }]}>
                     <MaterialCommunityIcons name="molecule" size={18} color={isGasAlert ? '#ef4444' : '#10b981'} />
                   </View>
                   <View>
-                    <Text style={styles.cardTitle}>Gas (MQ-2)</Text>
-                    <Text style={styles.cardSub}>Hazardous Vapor / Smoke</Text>
+                    <Text style={[styles.cardTitle, { color: theme.text.primary }]}>Gas (MQ-2)</Text>
+                    <Text style={[styles.cardSub, { color: theme.text.muted }]}>Hazardous Vapor / Smoke</Text>
                   </View>
                 </View>
                 <View style={[
@@ -416,11 +359,17 @@ export default function DashboardScreen({
                 <Text style={[styles.bigValue, { color: isGasAlert ? '#ef4444' : '#10b981' }]}>
                   {isGasAlert ? 'Detected' : 'Clear'}
                 </Text>
-                <Text style={styles.bigUnit}>{isGasAlert ? 'ALERT' : 'SAFE'}</Text>
+                <Text style={[styles.bigUnit, { color: theme.text.secondary }]}>{isGasAlert ? 'ALERT' : 'SAFE'}</Text>
               </View>
 
               <View style={styles.indicatorContainer}>
-                <View style={[styles.indicatorPill, { backgroundColor: isGasAlert ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.12)' }]}>
+                <View style={[
+                  styles.indicatorPill, 
+                  { 
+                    backgroundColor: isGasAlert ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.12)',
+                    borderColor: isGasAlert ? 'rgba(239, 68, 68, 0.3)' : 'rgba(16, 185, 129, 0.3)'
+                  }
+                ]}>
                   <MaterialCommunityIcons 
                     name={isGasAlert ? "shield-alert" : "shield-check"} 
                     size={14} 
@@ -432,22 +381,24 @@ export default function DashboardScreen({
                 </View>
               </View>
 
-              <View style={styles.cardFooter}>
-                <Text style={styles.cardFooterStatus}>Sensor: <Text style={styles.cardFooterGreen}>Active</Text></Text>
-                <Text style={styles.cardFooterSub}>Updated: {lastUpdatedTime}</Text>
+              <View style={[styles.cardFooter, { borderTopColor: theme.surfaceBorder }]}>
+                <Text style={[styles.cardFooterStatus, { color: theme.text.secondary }]}>
+                  Sensor: <Text style={styles.cardFooterGreen}>Active</Text>
+                </Text>
+                <Text style={[styles.cardFooterSub, { color: theme.text.muted }]}>Updated: {lastUpdatedTime}</Text>
               </View>
             </View>
 
             {/* CARD 4: RAIN SENSOR */}
-            <View style={styles.sensorCard}>
+            <View style={[styles.sensorCard, { backgroundColor: theme.card, borderColor: theme.cardBorder }]}>
               <View style={styles.cardHeader}>
                 <View style={styles.cardHeaderLeft}>
                   <View style={[styles.iconBox, { backgroundColor: isRaining ? 'rgba(56, 189, 248, 0.15)' : 'rgba(245, 158, 11, 0.15)' }]}>
                     <MaterialCommunityIcons name={isRaining ? "weather-rainy" : "weather-sunny"} size={18} color={isRaining ? '#38bdf8' : '#f59e0b'} />
                   </View>
                   <View>
-                    <Text style={styles.cardTitle}>Rain Detector</Text>
-                    <Text style={styles.cardSub}>Surface Precipitation</Text>
+                    <Text style={[styles.cardTitle, { color: theme.text.primary }]}>Rain Detector</Text>
+                    <Text style={[styles.cardSub, { color: theme.text.muted }]}>Surface Precipitation</Text>
                   </View>
                 </View>
                 <View style={[
@@ -464,14 +415,20 @@ export default function DashboardScreen({
               </View>
 
               <View style={styles.valueRow}>
-                <Text style={[styles.bigValue, { color: isRaining ? '#38bdf8' : '#f8fafc' }]}>
+                <Text style={[styles.bigValue, { color: isRaining ? '#38bdf8' : theme.text.primary }]}>
                   {isRaining ? 'Active' : 'Dry'}
                 </Text>
-                <Text style={styles.bigUnit}>{isRaining ? 'RAIN' : 'NO RAIN'}</Text>
+                <Text style={[styles.bigUnit, { color: theme.text.secondary }]}>{isRaining ? 'RAIN' : 'NO RAIN'}</Text>
               </View>
 
               <View style={styles.indicatorContainer}>
-                <View style={[styles.indicatorPill, { backgroundColor: isRaining ? 'rgba(56, 189, 248, 0.15)' : 'rgba(245, 158, 11, 0.12)' }]}>
+                <View style={[
+                  styles.indicatorPill, 
+                  { 
+                    backgroundColor: isRaining ? 'rgba(56, 189, 248, 0.15)' : 'rgba(245, 158, 11, 0.12)',
+                    borderColor: isRaining ? 'rgba(56, 189, 248, 0.3)' : 'rgba(245, 158, 11, 0.25)'
+                  }
+                ]}>
                   <MaterialCommunityIcons 
                     name={isRaining ? "water-alert" : "weather-sunny"} 
                     size={14} 
@@ -483,24 +440,26 @@ export default function DashboardScreen({
                 </View>
               </View>
 
-              <View style={styles.cardFooter}>
-                <Text style={styles.cardFooterStatus}>Probe: <Text style={styles.cardFooterGreen}>Connected</Text></Text>
-                <Text style={styles.cardFooterSub}>Updated: {lastUpdatedTime}</Text>
+              <View style={[styles.cardFooter, { borderTopColor: theme.surfaceBorder }]}>
+                <Text style={[styles.cardFooterStatus, { color: theme.text.secondary }]}>
+                  Probe: <Text style={styles.cardFooterGreen}>Connected</Text>
+                </Text>
+                <Text style={[styles.cardFooterSub, { color: theme.text.muted }]}>Updated: {lastUpdatedTime}</Text>
               </View>
             </View>
 
           </View>
 
           {/* ================= SECTION 2: HEAT INDEX CARD ================= */}
-          <View style={styles.heatIndexCard}>
+          <View style={[styles.heatIndexCard, { backgroundColor: theme.card, borderColor: 'rgba(245, 158, 11, 0.35)' }]}>
             <View style={styles.heatIndexHeader}>
               <View style={styles.heatIndexHeaderLeft}>
                 <View style={styles.heatIndexIconBox}>
                   <MaterialCommunityIcons name="fire" size={20} color="#f59e0b" />
                 </View>
                 <View>
-                  <Text style={styles.heatIndexTitle}>Heat Index (Apparent Temperature)</Text>
-                  <Text style={styles.heatIndexSubtitle}>Biometeorological Apparent Comfort Level</Text>
+                  <Text style={[styles.heatIndexTitle, { color: theme.text.primary }]}>Heat Index (Apparent Temperature)</Text>
+                  <Text style={[styles.heatIndexSubtitle, { color: theme.text.muted }]}>Biometeorological Apparent Comfort Level</Text>
                 </View>
               </View>
               <View style={[styles.heatBadge, { backgroundColor: `${heatIndexData.badgeColor}20`, borderColor: heatIndexData.badgeColor }]}>
@@ -511,16 +470,16 @@ export default function DashboardScreen({
             <View style={styles.heatIndexBody}>
               <View style={styles.heatIndexMainValue}>
                 <Text style={styles.heatIndexNumber}>{heatIndexData.value}</Text>
-                <Text style={styles.heatIndexUnit}>{tempUnit}</Text>
+                <Text style={[styles.heatIndexUnit, { color: theme.text.secondary }]}>{tempUnit}</Text>
               </View>
-              <View style={styles.heatIndexDeltaPill}>
-                <MaterialCommunityIcons name="information-outline" size={12} color="#94a3b8" />
-                <Text style={styles.heatIndexDeltaText}>{heatIndexData.delta}</Text>
+              <View style={[styles.heatIndexDeltaPill, { backgroundColor: theme.cardSubtle, borderColor: theme.surfaceBorder }]}>
+                <MaterialCommunityIcons name="information-outline" size={12} color={theme.text.muted} />
+                <Text style={[styles.heatIndexDeltaText, { color: theme.text.secondary }]}>{heatIndexData.delta}</Text>
               </View>
             </View>
 
-            <View style={styles.heatIndexFooter}>
-              <Text style={styles.heatIndexFormula}>
+            <View style={[styles.heatIndexFooter, { borderTopColor: theme.surfaceBorder }]}>
+              <Text style={[styles.heatIndexFormula, { color: theme.text.muted }]}>
                 Derived via Rothfusz Regression from Ambient Temp ({displayTemp.toFixed(1)}{tempUnit}) & Relative Humidity ({currentHum.toFixed(0)}%)
               </Text>
             </View>
@@ -529,81 +488,81 @@ export default function DashboardScreen({
           {/* ================= SECTION 3: 12-HOUR ANALYSIS & GRAPHS ================= */}
           <View style={styles.analysisHeaderRow}>
             <View style={styles.analysisTitleGroup}>
-              <MaterialCommunityIcons name="chart-bell-curve-cumulative" size={16} color="#38bdf8" />
-              <Text style={styles.analysisTitle}>12-Hour Telemetry Analysis</Text>
+              <MaterialCommunityIcons name="chart-bell-curve-cumulative" size={16} color={theme.brand.sky} />
+              <Text style={[styles.analysisTitle, { color: theme.text.primary }]}>12-Hour Telemetry Analysis</Text>
             </View>
-            <View style={styles.analysisWindowBadge}>
-              <MaterialCommunityIcons name="clock-time-four-outline" size={11} color="#94a3b8" />
-              <Text style={styles.analysisWindowText}>Rolling 12 Hours</Text>
+            <View style={[styles.analysisWindowBadge, { backgroundColor: theme.cardSubtle, borderColor: theme.surfaceBorder }]}>
+              <MaterialCommunityIcons name="clock-time-four-outline" size={11} color={theme.text.muted} />
+              <Text style={[styles.analysisWindowText, { color: theme.text.secondary }]}>Rolling 12 Hours</Text>
             </View>
           </View>
 
           {/* 12-Hour Summary Stats Grid */}
           <View style={styles.statsGrid}>
             {/* Temp Stats Box */}
-            <View style={styles.statBox}>
-              <Text style={styles.statBoxTitle}>Temperature</Text>
+            <View style={[styles.statBox, { backgroundColor: theme.cardSubtle, borderColor: theme.surfaceBorder }]}>
+              <Text style={[styles.statBoxTitle, { color: theme.text.secondary }]}>Temperature</Text>
               <View style={styles.statRows}>
                 <View style={styles.statMiniRow}>
-                  <Text style={styles.statMiniLabel}>Min:</Text>
-                  <Text style={styles.statMiniVal}>{stats12h.temp.min}{tempUnit}</Text>
+                  <Text style={[styles.statMiniLabel, { color: theme.text.muted }]}>Min:</Text>
+                  <Text style={[styles.statMiniVal, { color: theme.text.primary }]}>{stats12h.temp.min}{tempUnit}</Text>
                 </View>
                 <View style={styles.statMiniRow}>
-                  <Text style={styles.statMiniLabel}>Avg:</Text>
-                  <Text style={[styles.statMiniVal, { color: '#38bdf8' }]}>{stats12h.temp.avg}{tempUnit}</Text>
+                  <Text style={[styles.statMiniLabel, { color: theme.text.muted }]}>Avg:</Text>
+                  <Text style={[styles.statMiniVal, { color: theme.brand.sky }]}>{stats12h.temp.avg}{tempUnit}</Text>
                 </View>
                 <View style={styles.statMiniRow}>
-                  <Text style={styles.statMiniLabel}>Max:</Text>
-                  <Text style={styles.statMiniVal}>{stats12h.temp.max}{tempUnit}</Text>
+                  <Text style={[styles.statMiniLabel, { color: theme.text.muted }]}>Max:</Text>
+                  <Text style={[styles.statMiniVal, { color: theme.text.primary }]}>{stats12h.temp.max}{tempUnit}</Text>
                 </View>
               </View>
             </View>
 
             {/* Humidity Stats Box */}
-            <View style={styles.statBox}>
-              <Text style={styles.statBoxTitle}>Humidity</Text>
+            <View style={[styles.statBox, { backgroundColor: theme.cardSubtle, borderColor: theme.surfaceBorder }]}>
+              <Text style={[styles.statBoxTitle, { color: theme.text.secondary }]}>Humidity</Text>
               <View style={styles.statRows}>
                 <View style={styles.statMiniRow}>
-                  <Text style={styles.statMiniLabel}>Min:</Text>
-                  <Text style={styles.statMiniVal}>{stats12h.hum.min}%</Text>
+                  <Text style={[styles.statMiniLabel, { color: theme.text.muted }]}>Min:</Text>
+                  <Text style={[styles.statMiniVal, { color: theme.text.primary }]}>{stats12h.hum.min}%</Text>
                 </View>
                 <View style={styles.statMiniRow}>
-                  <Text style={styles.statMiniLabel}>Avg:</Text>
-                  <Text style={[styles.statMiniVal, { color: '#38bdf8' }]}>{stats12h.hum.avg}%</Text>
+                  <Text style={[styles.statMiniLabel, { color: theme.text.muted }]}>Avg:</Text>
+                  <Text style={[styles.statMiniVal, { color: theme.brand.sky }]}>{stats12h.hum.avg}%</Text>
                 </View>
                 <View style={styles.statMiniRow}>
-                  <Text style={styles.statMiniLabel}>Max:</Text>
-                  <Text style={styles.statMiniVal}>{stats12h.hum.max}%</Text>
+                  <Text style={[styles.statMiniLabel, { color: theme.text.muted }]}>Max:</Text>
+                  <Text style={[styles.statMiniVal, { color: theme.text.primary }]}>{stats12h.hum.max}%</Text>
                 </View>
               </View>
             </View>
 
             {/* Gas Stats Box */}
-            <View style={styles.statBox}>
-              <Text style={styles.statBoxTitle}>Gas Hazard</Text>
+            <View style={[styles.statBox, { backgroundColor: theme.cardSubtle, borderColor: theme.surfaceBorder }]}>
+              <Text style={[styles.statBoxTitle, { color: theme.text.secondary }]}>Gas Hazard</Text>
               <View style={styles.statRows}>
                 <View style={styles.statMiniRow}>
-                  <Text style={styles.statMiniLabel}>Active:</Text>
-                  <Text style={styles.statMiniVal}>{stats12h.gas.alertHours} hrs</Text>
+                  <Text style={[styles.statMiniLabel, { color: theme.text.muted }]}>Active:</Text>
+                  <Text style={[styles.statMiniVal, { color: theme.text.primary }]}>{stats12h.gas.alertHours} hrs</Text>
                 </View>
                 <View style={styles.statMiniRow}>
-                  <Text style={styles.statMiniLabel}>Status:</Text>
+                  <Text style={[styles.statMiniLabel, { color: theme.text.muted }]}>Status:</Text>
                   <Text style={[styles.statMiniVal, { color: '#10b981' }]}>{stats12h.gas.status}</Text>
                 </View>
               </View>
             </View>
 
             {/* Rain Stats Box */}
-            <View style={styles.statBox}>
-              <Text style={styles.statBoxTitle}>Precipitation</Text>
+            <View style={[styles.statBox, { backgroundColor: theme.cardSubtle, borderColor: theme.surfaceBorder }]}>
+              <Text style={[styles.statBoxTitle, { color: theme.text.secondary }]}>Precipitation</Text>
               <View style={styles.statRows}>
                 <View style={styles.statMiniRow}>
-                  <Text style={styles.statMiniLabel}>Duration:</Text>
-                  <Text style={styles.statMiniVal}>{stats12h.rain.activeHours} hrs</Text>
+                  <Text style={[styles.statMiniLabel, { color: theme.text.muted }]}>Duration:</Text>
+                  <Text style={[styles.statMiniVal, { color: theme.text.primary }]}>{stats12h.rain.activeHours} hrs</Text>
                 </View>
                 <View style={styles.statMiniRow}>
-                  <Text style={styles.statMiniLabel}>Status:</Text>
-                  <Text style={[styles.statMiniVal, { color: '#38bdf8' }]}>{stats12h.rain.status}</Text>
+                  <Text style={[styles.statMiniLabel, { color: theme.text.muted }]}>Status:</Text>
+                  <Text style={[styles.statMiniVal, { color: theme.brand.sky }]}>{stats12h.rain.status}</Text>
                 </View>
               </View>
             </View>
@@ -616,39 +575,25 @@ export default function DashboardScreen({
             currentHum={currentHum}
             isRaining={isRaining}
             isGasAlert={isGasAlert}
-            isFahrenheit={useFahrenheit}
+            isFahrenheit={isFahrenheit}
+            theme={theme}
+            isDark={isDark}
           />
-
-          {/* Quick Switch Banner to City Dashboard */}
-          <TouchableOpacity 
-            style={styles.switchBanner} 
-            onPress={() => setMode('city')}
-            activeOpacity={0.8}
-          >
-            <View style={styles.switchBannerLeft}>
-              <View style={styles.switchBannerIcon}>
-                <MaterialCommunityIcons name="city" size={18} color="#38bdf8" />
-              </View>
-              <View>
-                <Text style={styles.switchBannerTitle}>Open City Weather & Traffic Dashboard</Text>
-                <Text style={styles.switchBannerDesc}>View Anand Weather, AQI & Live Corridor Traffic</Text>
-              </View>
-            </View>
-            <MaterialCommunityIcons name="arrow-right-circle" size={20} color="#38bdf8" />
-          </TouchableOpacity>
         </View>
       )}
 
       {/* Footer Info */}
-      <View style={styles.footer}>
+      <View style={[styles.footer, { borderTopColor: theme.surfaceBorder }]}>
         <View style={styles.footerRow}>
-          <Text style={styles.footerText}>Smart City Urban Platform • Hardware Node 01</Text>
+          <Text style={[styles.footerText, { color: theme.text.muted }]}>Smart City Urban Platform • Hardware Node 01</Text>
           <View style={styles.liveIndicator}>
-            <View style={styles.pulseDot} />
-            <Text style={styles.liveText}>Live Telemetry</Text>
+            <View style={[styles.pulseDot, { backgroundColor: theme.status.success }]} />
+            <Text style={[styles.liveText, { color: theme.status.success }]}>Live Telemetry</Text>
           </View>
         </View>
-        <Text style={styles.footerSubText}>Connected to Express Backend & Firebase RTDB</Text>
+        <Text style={[styles.footerSubText, { color: theme.text.muted }]}>
+          Connected to Express Backend & Firebase RTDB
+        </Text>
       </View>
     </ScrollView>
   );
@@ -656,88 +601,11 @@ export default function DashboardScreen({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    backgroundColor: '#030712'
+    flex: 1
   },
   content: {
     padding: 14,
-    paddingBottom: 40
-  },
-  webMirrorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: 'rgba(14, 165, 233, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.35)',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 12
-  },
-  webMirrorBannerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1
-  },
-  webMirrorBannerText: {
-    color: '#f8fafc',
-    fontSize: 12,
-    fontWeight: '600'
-  },
-  webMirrorBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(56, 189, 248, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6
-  },
-  webMirrorBadgeText: {
-    color: '#38bdf8',
-    fontSize: 10,
-    fontWeight: '700'
-  },
-  segmentContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#0f172a',
-    borderRadius: 12,
-    padding: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(51, 65, 85, 0.8)',
-    marginBottom: 14
-  },
-  segmentBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 9,
-    gap: 6,
-    position: 'relative'
-  },
-  segmentBtnActive: {
-    backgroundColor: '#1e293b'
-  },
-  segmentText: {
-    color: '#94a3b8',
-    fontSize: 13,
-    fontWeight: '600'
-  },
-  segmentTextActive: {
-    color: '#f8fafc',
-    fontWeight: '700'
-  },
-  activeDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-    backgroundColor: '#38bdf8',
-    position: 'absolute',
-    bottom: 3
+    paddingBottom: 30
   },
   citySection: {
     marginBottom: 10
@@ -760,16 +628,13 @@ const styles = StyleSheet.create({
   livePulseDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10b981'
+    borderRadius: 4
   },
   statusSubtitle: {
-    color: '#e2e8f0',
     fontSize: 12,
     fontWeight: '600'
   },
   syncClock: {
-    color: '#94a3b8',
     fontSize: 11,
     fontFamily: 'monospace'
   },
@@ -785,7 +650,6 @@ const styles = StyleSheet.create({
     gap: 6
   },
   sectionTitle: {
-    color: '#f8fafc',
     fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.2
@@ -796,26 +660,23 @@ const styles = StyleSheet.create({
     gap: 8
   },
   probesBadge: {
-    color: '#94a3b8',
-    fontSize: 11,
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(51, 65, 85, 0.6)',
-    fontFamily: 'monospace'
+    borderWidth: 1
+  },
+  probesBadgeText: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    fontWeight: '600'
   },
   unitBtn: {
-    backgroundColor: 'rgba(14, 165, 233, 0.15)',
     borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.35)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6
   },
   unitBtnText: {
-    color: '#38bdf8',
     fontSize: 11,
     fontWeight: '700',
     fontFamily: 'monospace'
@@ -825,11 +686,9 @@ const styles = StyleSheet.create({
     marginBottom: 16
   },
   sensorCard: {
-    backgroundColor: '#0f172a',
     borderRadius: 14,
     padding: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(51, 65, 85, 0.7)'
+    borderWidth: 1
   },
   cardHeader: {
     flexDirection: 'row',
@@ -850,12 +709,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   cardTitle: {
-    color: '#f8fafc',
     fontSize: 14,
     fontWeight: '700'
   },
   cardSub: {
-    color: '#64748b',
     fontSize: 10,
     marginTop: 1
   },
@@ -879,12 +736,10 @@ const styles = StyleSheet.create({
   bigValue: {
     fontSize: 32,
     fontWeight: '800',
-    color: '#f8fafc',
     fontFamily: 'monospace'
   },
   bigUnit: {
     fontSize: 13,
-    color: '#94a3b8',
     fontWeight: '600'
   },
   scaleContainer: {
@@ -897,17 +752,14 @@ const styles = StyleSheet.create({
     marginBottom: 4
   },
   scaleLabelText: {
-    color: '#64748b',
     fontSize: 9,
     fontFamily: 'monospace'
   },
   scaleLabelMid: {
-    color: '#94a3b8',
     fontSize: 9
   },
   scaleBarTrack: {
     height: 6,
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
     borderRadius: 3,
     overflow: 'hidden'
   },
@@ -924,7 +776,8 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: 8
+    borderRadius: 8,
+    borderWidth: 1
   },
   indicatorText: {
     fontSize: 11,
@@ -935,12 +788,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(51, 65, 85, 0.4)',
     paddingTop: 8,
     marginTop: 4
   },
   cardFooterStatus: {
-    color: '#94a3b8',
     fontSize: 10
   },
   cardFooterGreen: {
@@ -948,16 +799,13 @@ const styles = StyleSheet.create({
     fontWeight: '600'
   },
   cardFooterSub: {
-    color: '#64748b',
     fontSize: 10,
     fontFamily: 'monospace'
   },
   heatIndexCard: {
-    backgroundColor: '#0f172a',
     borderRadius: 14,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.35)',
     marginBottom: 16
   },
   heatIndexHeader: {
@@ -980,12 +828,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center'
   },
   heatIndexTitle: {
-    color: '#f8fafc',
     fontSize: 13,
     fontWeight: '700'
   },
   heatIndexSubtitle: {
-    color: '#64748b',
     fontSize: 10
   },
   heatBadge: {
@@ -1017,34 +863,28 @@ const styles = StyleSheet.create({
   },
   heatIndexUnit: {
     fontSize: 14,
-    color: '#94a3b8',
     fontWeight: '600'
   },
   heatIndexDeltaPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(51, 65, 85, 0.6)'
+    borderWidth: 1
   },
   heatIndexDeltaText: {
-    color: '#cbd5e1',
     fontSize: 11,
     fontFamily: 'monospace',
     fontWeight: '600'
   },
   heatIndexFooter: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(51, 65, 85, 0.4)',
     paddingTop: 8,
     marginTop: 6
   },
   heatIndexFormula: {
-    color: '#64748b',
     fontSize: 10,
     lineHeight: 14
   },
@@ -1060,7 +900,6 @@ const styles = StyleSheet.create({
     gap: 6
   },
   analysisTitle: {
-    color: '#f8fafc',
     fontSize: 14,
     fontWeight: '700'
   },
@@ -1068,15 +907,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(51, 65, 85, 0.6)'
+    borderWidth: 1
   },
   analysisWindowText: {
-    color: '#94a3b8',
     fontSize: 10,
     fontFamily: 'monospace'
   },
@@ -1089,14 +925,11 @@ const styles = StyleSheet.create({
   statBox: {
     flex: 1,
     minWidth: '47%',
-    backgroundColor: '#0f172a',
     borderRadius: 10,
     padding: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(51, 65, 85, 0.6)'
+    borderWidth: 1
   },
   statBoxTitle: {
-    color: '#94a3b8',
     fontSize: 11,
     fontWeight: '600',
     marginBottom: 6
@@ -1109,55 +942,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between'
   },
   statMiniLabel: {
-    color: '#64748b',
     fontSize: 10
   },
   statMiniVal: {
-    color: '#f8fafc',
     fontSize: 10,
     fontFamily: 'monospace',
     fontWeight: '600'
-  },
-  switchBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#0f172a',
-    borderWidth: 1,
-    borderColor: 'rgba(56, 189, 248, 0.35)',
-    borderRadius: 14,
-    padding: 14,
-    marginTop: 16
-  },
-  switchBannerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    flex: 1
-  },
-  switchBannerIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(14, 165, 233, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center'
-  },
-  switchBannerTitle: {
-    color: '#f8fafc',
-    fontSize: 13,
-    fontWeight: '700'
-  },
-  switchBannerDesc: {
-    color: '#94a3b8',
-    fontSize: 10,
-    marginTop: 2
   },
   footer: {
     marginTop: 20,
     paddingTop: 14,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(51, 65, 85, 0.4)',
     alignItems: 'center',
     gap: 4
   },
@@ -1167,7 +962,6 @@ const styles = StyleSheet.create({
     gap: 10
   },
   footerText: {
-    color: '#64748b',
     fontSize: 11
   },
   liveIndicator: {
@@ -1178,16 +972,13 @@ const styles = StyleSheet.create({
   pulseDot: {
     width: 6,
     height: 6,
-    borderRadius: 3,
-    backgroundColor: '#10b981'
+    borderRadius: 3
   },
   liveText: {
-    color: '#10b981',
     fontSize: 10,
     fontWeight: '600'
   },
   footerSubText: {
-    color: '#475569',
     fontSize: 10
   }
 });
