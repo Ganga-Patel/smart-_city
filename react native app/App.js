@@ -1,73 +1,42 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, SafeAreaView, TouchableOpacity, Text, StatusBar } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from './constants/Colors';
 import Header from './components/Header';
 import DashboardScreen from './screens/DashboardScreen';
-import AnalyticsScreen from './screens/AnalyticsScreen';
-import AlertsScreen from './screens/AlertsScreen';
-import SettingsScreen from './screens/SettingsScreen';
 import { subscribeToTelemetry } from './services/firebase';
-import { evaluateTelemetryAlerts } from './services/alerts';
 import { normalizeRawTelemetry } from './services/normalizer';
 import { startUnifiedPolling, fetchUnifiedDashboardData } from './services/api';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [dashboardMode, setDashboardMode] = useState('sensor'); // 'sensor' | 'city'
-  const [activeNode, setActiveNode] = useState('node_01');
+  // Only 2 pages as requested: 'sensor' | 'city' (Default to 'sensor' matching website)
+  const [dashboardMode, setDashboardMode] = useState('sensor');
   const [isConnected, setIsConnected] = useState(false);
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFahrenheit, setIsFahrenheit] = useState(false);
 
   // Live Telemetry & History State
   const [telemetry, setTelemetry] = useState(normalizeRawTelemetry(null, 'smartcity'));
   const [history, setHistory] = useState([]);
-  const [activeAlerts, setActiveAlerts] = useState(new Map());
-  const [acknowledgedKeys, setAcknowledgedKeys] = useState(new Set());
-  const [activeBannerAlert, setActiveBannerAlert] = useState(null);
-  
-  // Real-time Event Audit Logs
-  const [logs, setLogs] = useState([
-    { time: '16:00:00', tag: 'SYS', message: 'Smart City App started.' },
-    { time: '16:00:02', tag: 'NET', message: 'Connecting to Realtime Telemetry Stream...' }
-  ]);
 
-  const demoIntervalRef = useRef(null);
-
-  // Append a new event to audit log
-  const logEvent = (tag, message) => {
-    const time = new Date().toLocaleTimeString('en-GB');
-    setLogs(prev => [{ time, tag, message }, ...prev.slice(0, 30)]);
-  };
-
-  // 1. Subscribe to Live WebApp & Vercel Unified Telemetry (with Firebase fallback)
+  // Subscribe to Live WebApp Unified Telemetry (with Firebase fallback)
   useEffect(() => {
-    logEvent('NET', 'Connecting to WebApp & Vercel Unified Telemetry Stream...');
-    
-    // Live continuous polling of /api/dashboard-data (matches WebApp)
+    // 1. Live continuous polling of /api/dashboard-data (matches WebApp backend)
     const unsubApi = startUnifiedPolling(
       (data) => {
-        if (!isDemoMode && data) {
+        if (data) {
           handleIncomingTelemetry(data);
         }
       },
       (connected) => {
         setIsConnected(connected);
-        if (connected) {
-          logEvent('NET', 'Connected to WebApp & Vercel Unified API.');
-        } else {
-          logEvent('NET', 'Retrying WebApp API connection...');
-        }
       },
       5000
     );
 
-    // Secondary fallback listener for direct Firebase RTDB
+    // 2. Secondary fallback listener for direct Firebase RTDB
     const unsubFb = subscribeToTelemetry(
       (data) => {
-        if (!isDemoMode && data) {
+        if (data) {
           handleIncomingTelemetry(data);
         }
       },
@@ -80,7 +49,7 @@ export default function App() {
       if (unsubApi) unsubApi();
       if (unsubFb) unsubFb();
     };
-  }, [isDemoMode]);
+  }, []);
 
   // Handle incoming telemetry payload
   const handleIncomingTelemetry = (data) => {
@@ -99,22 +68,11 @@ export default function App() {
       }];
       return updated.slice(-200);
     });
-
-    // Evaluate safety alerts
-    try {
-      const { allAlerts, activeBannerAlert: bannerAlert } = evaluateTelemetryAlerts(
-        data,
-        acknowledgedKeys
-      );
-      setActiveAlerts(allAlerts);
-      setActiveBannerAlert(bannerAlert);
-    } catch (e) {}
   };
 
   // Manual pull-to-refresh
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    logEvent('USR', 'Manual telemetry refresh triggered.');
     try {
       const data = await fetchUnifiedDashboardData();
       if (data) {
@@ -122,69 +80,19 @@ export default function App() {
         setIsConnected(true);
       }
     } catch (err) {
-      logEvent('ERR', `Manual sync failed: ${err.message}`);
+      console.warn('Manual sync failed:', err.message);
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  const handleAcknowledgeAlert = (alertKey) => {
-    setAcknowledgedKeys(prev => new Set([...prev, alertKey]));
-    if (activeBannerAlert && activeBannerAlert.id === alertKey) {
-      setActiveBannerAlert(null);
-    }
-  };
-
-  const handleClearLogs = () => {
-    setLogs([]);
-  };
-
-  // Render current tab content
-  const renderScreen = () => {
-    switch (activeTab) {
-      case 'analytics':
-        return <AnalyticsScreen history={history} telemetry={telemetry} />;
-      case 'alerts':
-        return (
-          <AlertsScreen 
-            activeAlert={activeBannerAlert} 
-            logs={logs} 
-            onAcknowledgeAlert={handleAcknowledgeAlert} 
-            onClearLogs={handleClearLogs} 
-          />
-        );
-      case 'settings':
-        return (
-          <SettingsScreen 
-            activeNode={activeNode} 
-            onSelectNode={setActiveNode} 
-            isDemoMode={isDemoMode} 
-            onToggleDemo={() => setIsDemoMode(prev => !prev)} 
-            isConnected={isConnected} 
-            onSyncNow={handleRefresh}
-          />
-        );
-      default:
-        return (
-          <DashboardScreen 
-            telemetry={telemetry} 
-            history={history} 
-            onRefresh={handleRefresh} 
-            isRefreshing={isRefreshing}
-            isFahrenheit={isFahrenheit}
-            onToggleUnit={() => setIsFahrenheit(prev => !prev)}
-            activeMode={dashboardMode}
-            onToggleMode={(mode) => setDashboardMode(mode)}
-          />
-        );
-    }
-  };
+  const isSensor = dashboardMode === 'sensor';
 
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
-      {/* Top Header */}
+      {/* Top Header Matching Website */}
       <Header 
         isConnected={isConnected} 
         lastSyncTime={telemetry?.timestamp}
@@ -192,107 +100,58 @@ export default function App() {
         isFahrenheit={isFahrenheit}
         onToggleUnit={() => setIsFahrenheit(prev => !prev)}
         activeMode={dashboardMode}
-        onToggleMode={() => {
-          setActiveTab('dashboard');
-          setDashboardMode(prev => prev === 'city' ? 'sensor' : 'city');
-        }}
+        onToggleMode={() => setDashboardMode(prev => prev === 'sensor' ? 'city' : 'sensor')}
         location={telemetry?.location || 'Anand, Gujarat, India'}
       />
 
-      {/* Main Screen Content */}
+      {/* Main Screen Content: Dedicated City or Sensor Dashboard */}
       <View style={styles.screenContainer}>
-        {renderScreen()}
+        <DashboardScreen 
+          telemetry={telemetry} 
+          history={history} 
+          onRefresh={handleRefresh} 
+          isRefreshing={isRefreshing}
+          isFahrenheit={isFahrenheit}
+          onToggleUnit={() => setIsFahrenheit(prev => !prev)}
+          activeMode={dashboardMode}
+          onToggleMode={(mode) => setDashboardMode(mode)}
+        />
       </View>
 
-      {/* Bottom Navigation Bar */}
+      {/* Clean 2-Page Bottom Navigation Bar (ONLY City Dashboard & Sensor Dashboard) */}
       <View style={styles.tabBar}>
-        {/* 1. City Dashboard Tab */}
+        {/* Page 1: City Dashboard */}
         <TouchableOpacity 
-          style={styles.tabItem} 
-          onPress={() => {
-            setActiveTab('dashboard');
-            setDashboardMode('city');
-          }}
+          style={[styles.tabItem, !isSensor && styles.tabItemActive]} 
+          onPress={() => setDashboardMode('city')}
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons 
-            name={activeTab === 'dashboard' && dashboardMode === 'city' ? 'city-variant' : 'city-variant-outline'} 
+            name={!isSensor ? "city-variant" : "city-variant-outline"} 
             size={22} 
-            color={activeTab === 'dashboard' && dashboardMode === 'city' ? Colors.brand.sky : Colors.text.muted} 
+            color={!isSensor ? "#38bdf8" : "#64748b"} 
           />
-          <Text style={[styles.tabLabel, activeTab === 'dashboard' && dashboardMode === 'city' && styles.tabLabelActive]}>
-            City
+          <Text style={[styles.tabLabel, !isSensor && styles.tabLabelActive]}>
+            City Dashboard
           </Text>
+          {!isSensor && <View style={styles.activeBar} />}
         </TouchableOpacity>
 
-        {/* 2. Sensor Dashboard Tab */}
+        {/* Page 2: Sensor Dashboard */}
         <TouchableOpacity 
-          style={styles.tabItem} 
-          onPress={() => {
-            setActiveTab('dashboard');
-            setDashboardMode('sensor');
-          }}
+          style={[styles.tabItem, isSensor && styles.tabItemActive]} 
+          onPress={() => setDashboardMode('sensor')}
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons 
-            name={activeTab === 'dashboard' && dashboardMode === 'sensor' ? 'cpu-64-bit' : 'cpu-64-bit'} 
+            name={isSensor ? "cpu-64-bit" : "cpu-64-bit"} 
             size={22} 
-            color={activeTab === 'dashboard' && dashboardMode === 'sensor' ? Colors.brand.sky : Colors.text.muted} 
+            color={isSensor ? "#38bdf8" : "#64748b"} 
           />
-          <Text style={[styles.tabLabel, activeTab === 'dashboard' && dashboardMode === 'sensor' && styles.tabLabelActive]}>
-            Sensors
+          <Text style={[styles.tabLabel, isSensor && styles.tabLabelActive]}>
+            Sensor Dashboard
           </Text>
-        </TouchableOpacity>
-
-        {/* 3. 12h Analytics Tab */}
-        <TouchableOpacity 
-          style={styles.tabItem} 
-          onPress={() => setActiveTab('analytics')}
-          activeOpacity={0.7}
-        >
-          <MaterialCommunityIcons 
-            name={activeTab === 'analytics' ? 'chart-timeline-variant-shimmer' : 'chart-timeline-variant'} 
-            size={22} 
-            color={activeTab === 'analytics' ? Colors.brand.sky : Colors.text.muted} 
-          />
-          <Text style={[styles.tabLabel, activeTab === 'analytics' && styles.tabLabelActive]}>
-            Analytics
-          </Text>
-        </TouchableOpacity>
-
-        {/* 4. Safety Alerts Tab */}
-        <TouchableOpacity 
-          style={styles.tabItem} 
-          onPress={() => setActiveTab('alerts')}
-          activeOpacity={0.7}
-        >
-          <View>
-            <MaterialCommunityIcons 
-              name={activeTab === 'alerts' ? 'bell-alert' : 'bell-alert-outline'} 
-              size={22} 
-              color={activeBannerAlert ? Colors.status.danger : (activeTab === 'alerts' ? Colors.brand.sky : Colors.text.muted)} 
-            />
-            {activeBannerAlert && <View style={styles.alertBadgeDot} />}
-          </View>
-          <Text style={[styles.tabLabel, activeTab === 'alerts' && styles.tabLabelActive]}>
-            Alerts
-          </Text>
-        </TouchableOpacity>
-
-        {/* 5. Settings Tab */}
-        <TouchableOpacity 
-          style={styles.tabItem} 
-          onPress={() => setActiveTab('settings')}
-          activeOpacity={0.7}
-        >
-          <MaterialCommunityIcons 
-            name={activeTab === 'settings' ? 'cog' : 'cog-outline'} 
-            size={22} 
-            color={activeTab === 'settings' ? Colors.brand.sky : Colors.text.muted} 
-          />
-          <Text style={[styles.tabLabel, activeTab === 'settings' && styles.tabLabelActive]}>
-            Settings
-          </Text>
+          {isSensor && <View style={styles.activeBar} />}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -311,34 +170,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#0f172a',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(51, 65, 85, 0.6)',
-    paddingVertical: 8,
-    paddingBottom: 12,
-    justifyContent: 'space-around'
+    borderTopColor: 'rgba(51, 65, 85, 0.7)',
+    paddingVertical: 10,
+    paddingBottom: 14,
+    paddingHorizontal: 16,
+    gap: 12
   },
   tabItem: {
+    flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
-    gap: 3
+    paddingVertical: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(30, 41, 59, 0.5)',
+    borderWidth: 1,
+    borderColor: 'rgba(51, 65, 85, 0.4)',
+    gap: 8,
+    position: 'relative'
+  },
+  tabItemActive: {
+    backgroundColor: 'rgba(14, 165, 233, 0.15)',
+    borderColor: 'rgba(56, 189, 248, 0.5)'
   },
   tabLabel: {
-    color: '#64748b',
-    fontSize: 10,
-    fontWeight: '600',
-    fontFamily: 'monospace'
+    color: '#94a3b8',
+    fontSize: 12,
+    fontWeight: '600'
   },
   tabLabelActive: {
     color: '#38bdf8',
     fontWeight: '800'
   },
-  alertBadgeDot: {
+  activeBar: {
     position: 'absolute',
-    top: -2,
-    right: -2,
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: '#ef4444'
+    bottom: 2,
+    width: 24,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#38bdf8'
   }
 });
