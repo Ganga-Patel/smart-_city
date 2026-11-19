@@ -27,7 +27,7 @@ export const NODES = [
 
 export const API_CONFIG = {
   // Primary LAN IP of WebApp server running on port 3000
-  lanUrl: 'http://10.28.104.139:3000',
+  lanUrl: 'http://192.168.238.139:3000',
   // Localhost for Web browser testing
   localUrl: 'http://localhost:3000',
   // Optional Vercel production deployment URL

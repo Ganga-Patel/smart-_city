@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from './constants/Colors';
 import Header from './components/Header';
 import DashboardScreen from './screens/DashboardScreen';
+import WebDashboardMirror from './components/WebDashboardMirror';
 import AnalyticsScreen from './screens/AnalyticsScreen';
 import AlertsScreen from './screens/AlertsScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -14,6 +15,8 @@ import { startUnifiedPolling, fetchUnifiedDashboardData } from './services/api';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [dashboardMode, setDashboardMode] = useState('sensor'); // 'sensor' | 'city'
+  const [viewEngine, setViewEngine] = useState('webMirror'); // 'webMirror' (100% exact localhost) | 'native'
   const [activeNode, setActiveNode] = useState('node_01');
   const [isConnected, setIsConnected] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -29,7 +32,7 @@ export default function App() {
   
   // Real-time Event Audit Logs
   const [logs, setLogs] = useState([
-    { time: '16:00:00', tag: 'SYS', message: 'Smart City Sensor Dashboard started.' },
+    { time: '16:00:00', tag: 'SYS', message: 'Smart City App started.' },
     { time: '16:00:02', tag: 'NET', message: 'Connecting to Realtime Telemetry Stream...' }
   ]);
 
@@ -48,7 +51,7 @@ export default function App() {
     // Live continuous polling of /api/dashboard-data (matches WebApp)
     const unsubApi = startUnifiedPolling(
       (data) => {
-        if (!isDemoMode) {
+        if (!isDemoMode && data) {
           handleIncomingTelemetry(data);
         }
       },
@@ -83,6 +86,7 @@ export default function App() {
 
   // Handle incoming telemetry payload
   const handleIncomingTelemetry = (data) => {
+    if (!data) return;
     setTelemetry(data);
 
     // Update rolling history buffer (keep last 200 actual readings for 12h analysis)
@@ -99,12 +103,14 @@ export default function App() {
     });
 
     // Evaluate safety alerts
-    const { allAlerts, activeBannerAlert: bannerAlert } = evaluateTelemetryAlerts(
-      data,
-      acknowledgedKeys
-    );
-    setActiveAlerts(allAlerts);
-    setActiveBannerAlert(bannerAlert);
+    try {
+      const { allAlerts, activeBannerAlert: bannerAlert } = evaluateTelemetryAlerts(
+        data,
+        acknowledgedKeys
+      );
+      setActiveAlerts(allAlerts);
+      setActiveBannerAlert(bannerAlert);
+    } catch (e) {}
   };
 
   // Manual pull-to-refresh
@@ -113,8 +119,10 @@ export default function App() {
     logEvent('USR', 'Manual telemetry refresh triggered.');
     try {
       const data = await fetchUnifiedDashboardData();
-      handleIncomingTelemetry(data);
-      setIsConnected(true);
+      if (data) {
+        handleIncomingTelemetry(data);
+        setIsConnected(true);
+      }
     } catch (err) {
       logEvent('ERR', `Manual sync failed: ${err.message}`);
     } finally {
@@ -167,22 +175,46 @@ export default function App() {
             isRefreshing={isRefreshing}
             isFahrenheit={isFahrenheit}
             onToggleUnit={() => setIsFahrenheit(prev => !prev)}
+            activeMode={dashboardMode}
+            onToggleMode={(mode) => setDashboardMode(mode)}
+            onSwitchToWebMirror={() => setViewEngine('webMirror')}
           />
         );
     }
   };
 
+  // If in 1:1 Web Mirror Mode, render full-screen exact website (Sensor Dashboard as default)
+  if (viewEngine === 'webMirror') {
+    return (
+      <WebDashboardMirror 
+        initialPath="/sensor-dashboard" 
+        onSwitchToNative={() => setViewEngine('native')} 
+      />
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f172a" />
       
-      {/* Top Header matching sensor-dashboard.html */}
+      {/* Top Header */}
       <Header 
         isConnected={isConnected} 
         lastSyncTime={telemetry?.timestamp}
         onRefresh={handleRefresh}
         isFahrenheit={isFahrenheit}
         onToggleUnit={() => setIsFahrenheit(prev => !prev)}
+        activeMode={dashboardMode}
+        onToggleMode={() => {
+          setActiveTab('dashboard');
+          setDashboardMode(prev => prev === 'city' ? 'sensor' : 'city');
+        }}
+        viewEngine={viewEngine}
+        onToggleViewEngine={() => {
+          setActiveTab('dashboard');
+          setViewEngine('webMirror');
+        }}
+        location={telemetry?.location || 'Anand, Gujarat, India'}
       />
 
       {/* Main Screen Content */}
@@ -192,23 +224,45 @@ export default function App() {
 
       {/* Bottom Navigation Bar */}
       <View style={styles.tabBar}>
-        {/* 1. Sensor Dashboard Tab */}
+        {/* 1. City Dashboard Tab */}
         <TouchableOpacity 
           style={styles.tabItem} 
-          onPress={() => setActiveTab('dashboard')}
+          onPress={() => {
+            setActiveTab('dashboard');
+            setDashboardMode('city');
+          }}
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons 
-            name={activeTab === 'dashboard' ? 'cpu-64-bit' : 'cpu-64-bit'} 
+            name={activeTab === 'dashboard' && dashboardMode === 'city' ? 'city-variant' : 'city-variant-outline'} 
             size={22} 
-            color={activeTab === 'dashboard' ? Colors.brand.sky : Colors.text.muted} 
+            color={activeTab === 'dashboard' && dashboardMode === 'city' ? Colors.brand.sky : Colors.text.muted} 
           />
-          <Text style={[styles.tabLabel, activeTab === 'dashboard' && styles.tabLabelActive]}>
+          <Text style={[styles.tabLabel, activeTab === 'dashboard' && dashboardMode === 'city' && styles.tabLabelActive]}>
+            City
+          </Text>
+        </TouchableOpacity>
+
+        {/* 2. Sensor Dashboard Tab */}
+        <TouchableOpacity 
+          style={styles.tabItem} 
+          onPress={() => {
+            setActiveTab('dashboard');
+            setDashboardMode('sensor');
+          }}
+          activeOpacity={0.7}
+        >
+          <MaterialCommunityIcons 
+            name={activeTab === 'dashboard' && dashboardMode === 'sensor' ? 'cpu-64-bit' : 'cpu-64-bit'} 
+            size={22} 
+            color={activeTab === 'dashboard' && dashboardMode === 'sensor' ? Colors.brand.sky : Colors.text.muted} 
+          />
+          <Text style={[styles.tabLabel, activeTab === 'dashboard' && dashboardMode === 'sensor' && styles.tabLabelActive]}>
             Sensors
           </Text>
         </TouchableOpacity>
 
-        {/* 2. 12h Analytics Tab */}
+        {/* 3. 12h Analytics Tab */}
         <TouchableOpacity 
           style={styles.tabItem} 
           onPress={() => setActiveTab('analytics')}
@@ -224,7 +278,7 @@ export default function App() {
           </Text>
         </TouchableOpacity>
 
-        {/* 3. Safety Alerts Tab */}
+        {/* 4. Safety Alerts Tab */}
         <TouchableOpacity 
           style={styles.tabItem} 
           onPress={() => setActiveTab('alerts')}
@@ -243,7 +297,7 @@ export default function App() {
           </Text>
         </TouchableOpacity>
 
-        {/* 4. Settings Tab */}
+        {/* 5. Settings Tab */}
         <TouchableOpacity 
           style={styles.tabItem} 
           onPress={() => setActiveTab('settings')}

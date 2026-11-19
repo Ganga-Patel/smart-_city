@@ -6,6 +6,17 @@ export default function TwelveHourAnalysisGraph({ history = [], isFahrenheit = f
   // 'climate' | 'gas' | 'rain'
   const [activeMetric, setActiveMetric] = useState('climate');
 
+  const safeFormatTime = (ts) => {
+    try {
+      if (!ts) return '';
+      const d = new Date(ts);
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    } catch (e) {
+      return '';
+    }
+  };
+
   const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
   const cutoff = Date.now() - TWELVE_HOURS_MS;
   const records = history.filter(r => r && (r.timestamp || 0) >= cutoff);
@@ -92,10 +103,7 @@ export default function TwelveHourAnalysisGraph({ history = [], isFahrenheit = f
         {samplePoints.length > 0 ? (
           <View style={styles.barsContainer}>
             {samplePoints.map((pt, idx) => {
-              const timeLabel = new Date(pt.timestamp).toLocaleTimeString('en-GB', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              });
+              const timeLabel = safeFormatTime(pt.timestamp);
 
               if (activeMetric === 'climate') {
                 const tempVal = toDispTemp(pt.temperature);
