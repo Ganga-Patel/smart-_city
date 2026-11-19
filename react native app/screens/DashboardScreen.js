@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { ScrollView, View, Text, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import WeatherCard from '../components/WeatherCard';
@@ -16,9 +16,18 @@ export default function DashboardScreen({
   isFahrenheit = false,
   onToggleUnit,
   activeMode = 'sensor',
+  scrollTrigger = 0,
   theme = DarkTheme,
   isDark = true
 }) {
+  const scrollViewRef = useRef(null);
+
+  // Reset scroll position to top whenever activeMode changes or tab is pressed
+  useEffect(() => {
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0, animated: false });
+    }
+  }, [activeMode, scrollTrigger]);
   const safeFormatTime = (ts) => {
     try {
       if (!ts) return new Date().toLocaleTimeString('en-GB');
@@ -142,6 +151,8 @@ export default function DashboardScreen({
 
   return (
     <ScrollView 
+      ref={scrollViewRef}
+      key={`dashboard-scroll-${activeMode}`}
       style={[styles.container, { backgroundColor: theme.background }]} 
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor={theme.brand.sky} />}

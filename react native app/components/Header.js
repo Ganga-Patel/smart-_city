@@ -1,7 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { DarkTheme } from '../constants/Colors';
+
+const BRAND_LOGO = require('../assets/logo.png');
 
 export default function Header({ 
   isConnected = false, 
@@ -39,6 +41,7 @@ export default function Header({
       {/* Top Row: Brand & Identity */}
       <View style={styles.topRow}>
         <View style={styles.brandRow}>
+          {/* Website 1:1 Brand Logo */}
           <View style={[
             styles.logoBox, 
             { 
@@ -46,10 +49,10 @@ export default function Header({
               borderColor: isDark ? 'rgba(56, 189, 248, 0.3)' : 'rgba(14, 165, 233, 0.25)'
             }
           ]}>
-            <MaterialCommunityIcons 
-              name={isCity ? "city-variant" : "cpu-64-bit"} 
-              size={20} 
-              color={theme.brand.sky} 
+            <Image 
+              source={BRAND_LOGO} 
+              style={styles.logoImage} 
+              resizeMode="contain" 
             />
           </View>
           <View style={styles.titleColumn}>
@@ -180,12 +183,17 @@ const styles = StyleSheet.create({
     flex: 1
   },
   logoBox: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 10,
     borderWidth: 1,
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    padding: 2
+  },
+  logoImage: {
+    width: 30,
+    height: 30
   },
   titleColumn: {
     flex: 1

@@ -11,11 +11,21 @@ import { DarkTheme, LightTheme } from './constants/Colors';
 export default function App() {
   // Only 2 dashboard pages as requested: 'city' | 'sensor'
   const [dashboardMode, setDashboardMode] = useState('city');
+  const [scrollTrigger, setScrollTrigger] = useState(0);
   // Dark / Light Theme Mode (defaulting to dark matching website theme)
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isConnected, setIsConnected] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isFahrenheit, setIsFahrenheit] = useState(false);
+
+  const handleSelectMode = (mode) => {
+    if (dashboardMode === mode) {
+      // Tapping the active tab scrolls to top
+      setScrollTrigger(prev => prev + 1);
+    } else {
+      setDashboardMode(mode);
+    }
+  };
 
   // Derive active theme tokens
   const theme = isDarkMode ? DarkTheme : LightTheme;
@@ -124,6 +134,7 @@ export default function App() {
           isFahrenheit={isFahrenheit}
           onToggleUnit={() => setIsFahrenheit(prev => !prev)}
           activeMode={dashboardMode}
+          scrollTrigger={scrollTrigger}
           theme={theme}
           isDark={isDarkMode}
         />
@@ -153,7 +164,7 @@ export default function App() {
                   borderColor: theme.surfaceBorder
                 }
           ]} 
-          onPress={() => setDashboardMode('city')}
+          onPress={() => handleSelectMode('city')}
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons 
@@ -185,7 +196,7 @@ export default function App() {
                   borderColor: theme.surfaceBorder
                 }
           ]} 
-          onPress={() => setDashboardMode('sensor')}
+          onPress={() => handleSelectMode('sensor')}
           activeOpacity={0.7}
         >
           <MaterialCommunityIcons 
