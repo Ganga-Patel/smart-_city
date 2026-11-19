@@ -16,7 +16,7 @@ import { startUnifiedPolling, fetchUnifiedDashboardData } from './services/api';
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dashboardMode, setDashboardMode] = useState('sensor'); // 'sensor' | 'city'
-  const [viewEngine, setViewEngine] = useState('webMirror'); // 'webMirror' (100% exact localhost) | 'native'
+  const [viewEngine, setViewEngine] = useState('native'); // 'native' (instant 0ms render) | 'webMirror'
   const [activeNode, setActiveNode] = useState('node_01');
   const [isConnected, setIsConnected] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);

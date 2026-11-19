@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, ActivityIndicator, Text, TouchableOpacity, SafeAreaView, StatusBar, Platform } from 'react-native';
 import { WebView } from 'react-native-webview';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -8,7 +8,7 @@ export default function WebDashboardMirror({
   initialPath = '/sensor-dashboard', 
   onSwitchToNative 
 }) {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const webViewRef = useRef(null);
@@ -20,7 +20,14 @@ export default function WebDashboardMirror({
     setLoading(true);
     setHasError(false);
     setReloadKey(prev => prev + 1);
+    setTimeout(() => setLoading(false), 2000);
   };
+
+  useEffect(() => {
+    // Auto-dismiss loading indicator after 2 seconds max
+    const timer = setTimeout(() => setLoading(false), 2500);
+    return () => clearTimeout(timer);
+  }, [reloadKey]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -33,29 +40,33 @@ export default function WebDashboardMirror({
           ref={webViewRef}
           source={{ uri: targetUrl }}
           style={styles.webView}
+          originWhitelist={['*']}
           javaScriptEnabled={true}
           domStorageEnabled={true}
-          startInLoadingState={true}
+          startInLoadingState={false}
           scalesPageToFit={true}
           mixedContentMode="always"
           allowsInlineMediaPlayback={true}
+          cacheEnabled={false}
           onLoadStart={() => {
             setLoading(true);
             setHasError(false);
           }}
           onLoadEnd={() => setLoading(false)}
-          onError={() => {
+          onError={(e) => {
+            console.warn('WebView load error:', e.nativeEvent);
             setLoading(false);
             setHasError(true);
           }}
-          renderLoading={() => (
-            <View style={styles.loaderOverlay}>
-              <ActivityIndicator size="large" color="#38bdf8" />
-              <Text style={styles.loaderText}>Loading 1:1 Live Website Dashboard...</Text>
-              <Text style={styles.loaderSub}>{targetUrl}</Text>
-            </View>
-          )}
         />
+
+        {/* Non-blocking subtle loading pill at top center */}
+        {loading && (
+          <View style={styles.loadingPill}>
+            <ActivityIndicator size="small" color="#38bdf8" />
+            <Text style={styles.loadingPillText}>Syncing live web telemetry...</Text>
+          </View>
+        )}
 
         {/* Minimal Floating Switcher / Reload Pill at Bottom Right */}
         <View style={styles.floatingBar}>
@@ -119,25 +130,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#030712'
   },
-  loaderOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#0f172a',
+  loadingPill: {
+    position: 'absolute',
+    top: 12,
+    alignSelf: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
+    gap: 8,
+    backgroundColor: 'rgba(15, 23, 42, 0.92)',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(56, 189, 248, 0.4)',
     zIndex: 10
   },
-  loaderText: {
-    color: '#f8fafc',
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 14
-  },
-  loaderSub: {
-    color: '#64748b',
+  loadingPillText: {
+    color: '#38bdf8',
     fontSize: 11,
-    marginTop: 4,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace'
+    fontWeight: '600'
   },
   floatingBar: {
     position: 'absolute',
