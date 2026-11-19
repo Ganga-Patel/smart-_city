@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import WeatherCard from '../components/WeatherCard';
 import AirQualityCard from '../components/AirQualityCard';
 import TrafficCard from '../components/TrafficCard';
+import UrbanLiveMap from '../components/UrbanLiveMap';
 import TwelveHourAnalysisGraph from '../components/TwelveHourAnalysisGraph';
 
 export default function DashboardScreen({
@@ -237,6 +238,13 @@ export default function DashboardScreen({
           {/* BOX 3: URBAN MOBILITY & LIVE TRAFFIC */}
           <TrafficCard 
             traffic={telemetry?.traffic} 
+          />
+
+          {/* BOX 4: URBAN LIVE MAP (SPATIAL VECTOR & TRAFFIC CORRIDORS CANVAS) */}
+          <UrbanLiveMap 
+            location={telemetry?.location || 'Anand, Gujarat, India'}
+            traffic={telemetry?.traffic}
+            telemetry={telemetry}
           />
 
           {/* Quick Switch Banner to Sensor Dashboard */}
