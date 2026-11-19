@@ -4,7 +4,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from './constants/Colors';
 import Header from './components/Header';
 import DashboardScreen from './screens/DashboardScreen';
-import WebDashboardMirror from './components/WebDashboardMirror';
 import AnalyticsScreen from './screens/AnalyticsScreen';
 import AlertsScreen from './screens/AlertsScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -16,7 +15,6 @@ import { startUnifiedPolling, fetchUnifiedDashboardData } from './services/api';
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [dashboardMode, setDashboardMode] = useState('sensor'); // 'sensor' | 'city'
-  const [viewEngine, setViewEngine] = useState('native'); // 'native' (instant 0ms render) | 'webMirror'
   const [activeNode, setActiveNode] = useState('node_01');
   const [isConnected, setIsConnected] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState(false);
@@ -177,21 +175,10 @@ export default function App() {
             onToggleUnit={() => setIsFahrenheit(prev => !prev)}
             activeMode={dashboardMode}
             onToggleMode={(mode) => setDashboardMode(mode)}
-            onSwitchToWebMirror={() => setViewEngine('webMirror')}
           />
         );
     }
   };
-
-  // If in 1:1 Web Mirror Mode, render full-screen exact website (Sensor Dashboard as default)
-  if (viewEngine === 'webMirror') {
-    return (
-      <WebDashboardMirror 
-        initialPath="/sensor-dashboard" 
-        onSwitchToNative={() => setViewEngine('native')} 
-      />
-    );
-  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -208,11 +195,6 @@ export default function App() {
         onToggleMode={() => {
           setActiveTab('dashboard');
           setDashboardMode(prev => prev === 'city' ? 'sensor' : 'city');
-        }}
-        viewEngine={viewEngine}
-        onToggleViewEngine={() => {
-          setActiveTab('dashboard');
-          setViewEngine('webMirror');
         }}
         location={telemetry?.location || 'Anand, Gujarat, India'}
       />

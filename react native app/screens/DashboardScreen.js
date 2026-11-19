@@ -14,8 +14,7 @@ export default function DashboardScreen({
   isFahrenheit = false,
   onToggleUnit,
   activeMode = 'sensor',
-  onToggleMode,
-  onSwitchToWebMirror
+  onToggleMode
 }) {
   const [internalMode, setInternalMode] = useState(activeMode);
   const [internalFahrenheit, setInternalFahrenheit] = useState(isFahrenheit);
@@ -175,26 +174,6 @@ export default function DashboardScreen({
       refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} tintColor="#38bdf8" />}
       showsVerticalScrollIndicator={false}
     >
-      {/* 1:1 Localhost Web Mirror Quick-Switch Pill */}
-      {onSwitchToWebMirror && (
-        <TouchableOpacity 
-          style={styles.webMirrorBanner} 
-          onPress={onSwitchToWebMirror}
-          activeOpacity={0.8}
-        >
-          <View style={styles.webMirrorBannerLeft}>
-            <MaterialCommunityIcons name="web" size={16} color="#38bdf8" />
-            <Text style={styles.webMirrorBannerText}>
-              Switch to 1:1 Localhost Web Dashboard
-            </Text>
-          </View>
-          <View style={styles.webMirrorBadge}>
-            <Text style={styles.webMirrorBadgeText}>Exact Web UI</Text>
-            <MaterialCommunityIcons name="chevron-right" size={14} color="#38bdf8" />
-          </View>
-        </TouchableOpacity>
-      )}
-
       {/* ================= TOP SEGMENTED SWITCHER (CITY VS SENSORS) ================= */}
       <View style={styles.segmentContainer}>
         <TouchableOpacity 

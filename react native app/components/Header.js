@@ -10,9 +10,7 @@ export default function Header({
   onToggleUnit,
   activeMode = 'sensor',
   onToggleMode,
-  location = 'Anand, Gujarat, India',
-  viewEngine = 'webMirror',
-  onToggleViewEngine
+  location = 'Anand, Gujarat, India'
 }) {
   const safeFormatTime = (ts) => {
     try {
@@ -76,25 +74,7 @@ export default function Header({
               color="#38bdf8" 
             />
             <Text style={styles.modeSwitchBtnText}>
-              {isCity ? 'Sensors' : 'City'}
-            </Text>
-          </TouchableOpacity>
-        )}
-
-        {/* View Engine Switcher Button (1:1 Web Mirror vs Native Mobile) */}
-        {onToggleViewEngine && (
-          <TouchableOpacity 
-            style={[styles.engineBtn, viewEngine === 'webMirror' ? styles.engineBtnWeb : styles.engineBtnNative]} 
-            onPress={onToggleViewEngine}
-            activeOpacity={0.7}
-          >
-            <MaterialCommunityIcons 
-              name={viewEngine === 'webMirror' ? "web" : "cellphone"} 
-              size={12} 
-              color={viewEngine === 'webMirror' ? "#38bdf8" : "#10b981"} 
-            />
-            <Text style={[styles.engineBtnText, { color: viewEngine === 'webMirror' ? "#38bdf8" : "#10b981" }]}>
-              {viewEngine === 'webMirror' ? 'Web Mirror' : 'Native'}
+              {isCity ? 'Sensor Dashboard' : 'City Dashboard'}
             </Text>
           </TouchableOpacity>
         )}
